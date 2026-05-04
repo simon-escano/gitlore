@@ -1,12 +1,29 @@
 import type { InferenceContext } from "../ingestion/types";
-import { GitloreOutputSchema } from "../../schemas/response";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
-const OUTPUT_JSON_SCHEMA = JSON.stringify(
-  zodToJsonSchema(GitloreOutputSchema, { $refStrategy: "none" }),
-  null,
-  2
-);
+const JSON_TEMPLATE = `{
+  "title": "string",
+  "one_liner": "string",
+  "contributions": "string",
+  "problem": "string",
+  "goal": "string",
+  "results": {
+    "performance": { "icon": "lucide-icon-name", "text": "string" },
+    "scale": { "icon": "lucide-icon-name", "text": "string" },
+    "utility": { "icon": "lucide-icon-name", "text": "string" }
+  },
+  "stack": [
+    { "name": "string", "role": "Primary | Supporting | Infrastructure" }
+  ],
+  "stack_reason": "string",
+  "architecture_diagram_code": "string (valid mermaid graph TD)",
+  "gallery": [ "url string" ],
+  "links": [
+    { "icon": "lucide-icon-name", "label": "string", "url": "url string" }
+  ],
+  "key_features": [
+    { "icon": "lucide-icon-name", "text": "string" }
+  ]
+}`;
 
 export function buildSystemPrompt(): string {
   return `You are a Senior Technical Writer and Software Architect.
@@ -25,8 +42,8 @@ RULES:
 9. You MUST copy the exact URLs provided in the Gallery section directly into the output JSON's gallery array. Do not invent gallery URLs.
 10. Write as if presenting to a hiring manager at a top-tier tech company.
 
-OUTPUT: Return ONLY a valid JSON object matching the following JSON Schema. Do not add markdown fences, explanations, or preambles.
-${OUTPUT_JSON_SCHEMA}`;
+OUTPUT: Return ONLY a valid JSON object matching the exact structure below. Do not add markdown fences, explanations, or preambles.
+${JSON_TEMPLATE}`;
 }
 
 export function buildUserPrompt(context: InferenceContext): string {
