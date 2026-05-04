@@ -3,15 +3,8 @@ import { config } from "../../lib/config";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt";
 import { GitloreOutputSchema } from "../../schemas/response";
 import { Errors } from "../../lib/errors";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import type { InferenceContext } from "../ingestion/types";
 import type { GitloreOutput } from "../../schemas/response";
-
-// Convert Zod schema to JSON Schema for Ollama's `format` field.
-// $refStrategy: "none" inlines everything — Ollama doesn't resolve $refs.
-const OUTPUT_JSON_SCHEMA = zodToJsonSchema(GitloreOutputSchema, {
-  $refStrategy: "none",
-});
 
 interface OllamaStreamChunk {
   model: string;
@@ -39,11 +32,11 @@ export async function analyzeWithOllama(
       { role: "system", content: buildSystemPrompt() },
       { role: "user", content: buildUserPrompt(context) },
     ],
-    format: OUTPUT_JSON_SCHEMA,
+    format: "json",
     stream: true,
     options: {
       temperature: config.inference.temperature,
-      num_ctx: config.inference.numCtx,
+      num_thread: config.inference.numThread,
     },
   };
 

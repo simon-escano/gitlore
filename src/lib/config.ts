@@ -34,7 +34,8 @@ export const config = Object.freeze({
   },
   inference: {
     temperature: 0.3,
-    maxContextChars: Number(process.env.MAX_CONTEXT_CHARS ?? 24000),
+    maxContextChars: Number(process.env.MAX_CONTEXT_CHARS ?? 8000),
     numCtx: 8192,
+    numThread: process.env.OLLAMA_NUM_THREADS ? Number(process.env.OLLAMA_NUM_THREADS) : undefined,
   },
 }) as const;

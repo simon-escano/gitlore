@@ -1,4 +1,12 @@
 import type { InferenceContext } from "../ingestion/types";
+import { GitloreOutputSchema } from "../../schemas/response";
+import { zodToJsonSchema } from "zod-to-json-schema";
+
+const OUTPUT_JSON_SCHEMA = JSON.stringify(
+  zodToJsonSchema(GitloreOutputSchema, { $refStrategy: "none" }),
+  null,
+  2
+);
 
 export function buildSystemPrompt(): string {
   return `You are a Senior Technical Writer and Software Architect.
@@ -17,7 +25,8 @@ RULES:
 9. You MUST copy the exact URLs provided in the Gallery section directly into the output JSON's gallery array. Do not invent gallery URLs.
 10. Write as if presenting to a hiring manager at a top-tier tech company.
 
-OUTPUT: Return ONLY the JSON object. No markdown fences. No explanation. No preamble.`;
+OUTPUT: Return ONLY a valid JSON object matching the following JSON Schema. Do not add markdown fences, explanations, or preambles.
+${OUTPUT_JSON_SCHEMA}`;
 }
 
 export function buildUserPrompt(context: InferenceContext): string {
