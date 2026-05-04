@@ -25,13 +25,13 @@ export function validateOutput(
     };
   }
 
-  // Step 2: Mermaid syntax validation
-  const mermaid = validateMermaidSyntax(result.data.architecture_diagram_code);
-  if (!mermaid.valid) {
-    return {
-      success: false,
-      error: `Mermaid validation failed: ${mermaid.error}`,
-    };
+  // Step 2: Mermaid syntax validation (Graceful Degradation)
+  if (result.data.architecture_diagram_code) {
+    const mermaid = validateMermaidSyntax(result.data.architecture_diagram_code);
+    if (!mermaid.valid) {
+      // If the model hallucinated or output invalid mermaid, clear it rather than failing the whole API.
+      result.data.architecture_diagram_code = "";
+    }
   }
 
   return { success: true, data: result.data };
