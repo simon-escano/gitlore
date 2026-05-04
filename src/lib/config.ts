@@ -5,7 +5,7 @@ const envSchema = z.object({
   CEREBRAS_MODEL: z.string().default("llama3.1-8b"),
   GITHUB_PAT: z.string().optional(),
   PORT: z.string().default("3000"),
-  MAX_CONTEXT_CHARS: z.string().default("8000"),
+  MAX_CONTEXT_CHARS: z.string().default("16000"),
 });
 
 const env = envSchema.parse(process.env);
