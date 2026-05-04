@@ -39,16 +39,14 @@ The JSON MUST strictly satisfy this TypeScript interface:
 
 ${TS_INTERFACE}
 
-RULES:
-1. Be specific and quantitative. Never say "improved performance" — say "reduced cold start from 2.4s to 180ms".
-2. The architecture_diagram_code field MUST contain valid Mermaid.js syntax (graph TD or graph LR).
-3. The stack array must ONLY contain technologies that are actually evidenced in the codebase files provided.
-4. DO NOT output an empty template. You MUST generate actual content based on the repository code provided.
-5. If you cannot determine a value with confidence, use a reasonable inference from the codebase — never leave a field empty.
-6. The results object must contain performance, scale, and utility — each with an icon (Lucide name) and descriptive text.
-7. All URLs in the links array must be real, absolute URLs starting with "https://".
-8. The output must strictly adopt the provided Title and Role/Contributions. Write the case study from the perspective of someone in that Role.
-9. Write as if presenting to a hiring manager at a top-tier tech company.`;
+RULES (CRITICAL):
+1. NO EMPTY FIELDS: You MUST generate actual, detailed content for \`stack_reason\`, \`architecture_diagram_code\`, and \`key_features\`. Do not leave them empty.
+2. NO PLACEHOLDERS: Do NOT use fake URLs like "yourusername". Use the exact Repository URL provided in the prompt.
+3. MERMAID DIAGRAM: \`architecture_diagram_code\` MUST contain a valid Mermaid.js graph (e.g. \`graph TD; A-->B;\`). Draw the system architecture based on the provided code.
+4. LINKS: Provide actual absolute URLs to the repository.
+5. Be specific and quantitative in the \`results\` object.
+6. The \`stack\` array must ONLY contain technologies that are actually evidenced in the codebase files provided.
+7. Write as if presenting to a hiring manager at a top-tier tech company.`;
 }
 
 export function buildUserPrompt(context: InferenceContext): string {
@@ -59,6 +57,7 @@ export function buildUserPrompt(context: InferenceContext): string {
 ## Target Output Identity
 Title: ${context.title}
 My Role / Contributions: ${context.role}
+Repository URL: https://github.com/${context.owner}/${context.repo}
 Additional Context: ${context.context ?? "None provided"}
 
 ## Repository: ${context.owner}/${context.repo}
