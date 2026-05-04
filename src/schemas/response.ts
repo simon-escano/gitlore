@@ -32,7 +32,6 @@ const FeatureSchema = z.preprocess((val) => {
 }));
 
 export const GitloreOutputSchema = z.object({
-  _thinking: z.string().optional(),
   title: z.string().default("Project"),
   one_liner: z.string().default(""),
   contributions: z.string().default(""),
