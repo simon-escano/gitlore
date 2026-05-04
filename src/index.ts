@@ -12,8 +12,8 @@ app.get("/", (c) =>
     name: "gitlore",
     version: "1.0.0",
     status: "running",
-    model: config.ollama.model,
-    ollama: config.ollama.baseUrl,
+    model: config.cerebras.model,
+    provider: "cerebras",
   })
 );
 
@@ -50,7 +50,7 @@ app.onError((err, c) => {
 
 // Start server
 console.log(`⚡ Gitlore running on http://localhost:${config.server.port}`);
-console.log(`🧠 Model: ${config.ollama.model} @ ${config.ollama.baseUrl}`);
+console.log(`🧠 Model: ${config.cerebras.model} @ Cerebras Cloud`);
 
 serve({
   fetch: app.fetch,
