@@ -41,11 +41,11 @@ ${TS_INTERFACE}
 
 RULES (CRITICAL):
 1. THINK FIRST: You MUST write a multi-sentence architectural and system analysis in the \`_thinking\` field FIRST.
-2. NO EMPTY FIELDS: You MUST generate actual, detailed content for \`stack_reason\`, \`architecture_diagram_code\`, and \`key_features\`. Do not leave them empty.
-3. NO PLACEHOLDERS: Do NOT use fake URLs like "yourusername" or "docs.example.com". Use the exact Repository URL provided in the prompt.
-4. MERMAID DIAGRAM: \`architecture_diagram_code\` MUST contain a valid Mermaid.js graph TD diagram representing the codebase architecture.
-5. LINKS: Provide actual absolute URLs to the repository.
-6. Be specific and quantitative in the \`results\` object.
+2. NO HALLUCINATION: If specific quantitative data (like ms or percentages) is NOT present in the codebase, DO NOT invent fake numbers for the \`results\` object. Instead, describe qualitative architectural benefits (e.g., "Optimized inference pipeline for zero-latency execution").
+3. NO EMPTY FIELDS: You MUST generate actual, detailed content for \`stack_reason\`, \`architecture_diagram_code\`, and \`key_features\`. Do not leave them empty.
+4. COMPLEX DIAGRAM: \`architecture_diagram_code\` MUST contain a HIGHLY DETAILED Mermaid.js graph TD diagram. CRITICAL SYNTAX RULE: Node IDs must be alphanumeric without spaces. Always use bracketed labels for text (e.g., \`API["POST /api/generate"] --> Handler["Route Handler"]\`). DO NOT use raw spaces in node IDs.
+5. NO PLACEHOLDERS: Do NOT use fake URLs like "yourusername" or "docs.example.com". Use the exact Repository URL provided in the prompt.
+6. LINKS: Provide actual absolute URLs to the repository.
 7. The \`stack\` array must ONLY contain technologies that are actually evidenced in the codebase files provided.
 8. Write as if presenting to a hiring manager at a top-tier tech company.`;
 }
