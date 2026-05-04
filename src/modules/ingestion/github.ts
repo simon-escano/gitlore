@@ -21,6 +21,7 @@ export async function fetchRepoMeta(
   const res = await fetch(url, { headers: headers() });
 
   if (res.status === 404) throw Errors.repoNotFound(owner, repo);
+  if (res.status === 403) throw Errors.inferenceFailure("GitHub API Rate Limit Exceeded (403). Add a GITHUB_PAT to your .env file.");
   if (!res.ok) throw Errors.inferenceFailure(`GitHub API error: ${res.status}`);
 
   return res.json() as Promise<GitHubRepoResponse>;
@@ -46,6 +47,7 @@ export async function fetchFileTree(
   const url = `${config.github.apiBase}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
   const res = await fetch(url, { headers: headers() });
 
+  if (res.status === 403) throw Errors.inferenceFailure("GitHub API Rate Limit Exceeded (403) while fetching file tree. Add a GITHUB_PAT.");
   if (!res.ok) throw Errors.inferenceFailure(`Failed to fetch file tree: ${res.status}`);
 
   return res.json() as Promise<GitHubTreeResponse>;
