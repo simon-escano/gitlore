@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { GenerateRequestSchema } from "../schemas/request";
 import { ingestRepository } from "../modules/ingestion/packer";
-import { analyzeWithOllama } from "../modules/inference/ollama";
+import { analyzeWithCerebras } from "../modules/inference/cerebras";
 import { validateOutput } from "../modules/validation/schema";
 import { GitloreError, Errors } from "../lib/errors";
 
@@ -62,7 +62,7 @@ generateRoute.post("/generate", async (c) => {
 
   // Step 2: Run inference
   console.log(`\n🧠 STEP 2/3: Inference`);
-  const output = await analyzeWithOllama(inferenceContext);
+  const output = await analyzeWithCerebras(inferenceContext);
 
   // Step 3: Validate output (second Zod pass + Mermaid check)
   console.log(`\n✔  STEP 3/3: Validation`);

@@ -1,41 +1,31 @@
-const OLLAMA_BASE = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.1:8b";
+import { z } from "zod";
 
-/**
- * HARD GUARD: Only loopback addresses allowed for LLM inference.
- * Runs at import time — crashes the process if misconfigured.
- */
-function assertLocalEndpoint(url: string): void {
-  const parsed = new URL(url);
-  const allowed = ["127.0.0.1", "localhost", "::1", "0.0.0.0"];
-  if (!allowed.includes(parsed.hostname)) {
-    throw new Error(
-      `BLOCKED: "${parsed.hostname}" is not a local address. ` +
-        `Gitlore only connects to local Ollama. ` +
-        `Set OLLAMA_BASE_URL to http://127.0.0.1:11434`
-    );
-  }
-}
+const envSchema = z.object({
+  CEREBRAS_API_KEY: z.string({ required_error: "CEREBRAS_API_KEY is required" }),
+  CEREBRAS_MODEL: z.string().default("llama3.1-8b"),
+  GITHUB_PAT: z.string().optional(),
+  PORT: z.string().default("3000"),
+  MAX_CONTEXT_CHARS: z.string().default("8000"),
+});
 
-assertLocalEndpoint(OLLAMA_BASE);
+const env = envSchema.parse(process.env);
 
 export const config = Object.freeze({
-  ollama: {
-    baseUrl: OLLAMA_BASE,
-    model: OLLAMA_MODEL,
-    chatEndpoint: `${OLLAMA_BASE}/api/chat`,
+  cerebras: {
+    apiKey: env.CEREBRAS_API_KEY,
+    model: env.CEREBRAS_MODEL,
+    chatEndpoint: "https://api.cerebras.ai/v1/chat/completions",
   },
   github: {
-    pat: process.env.GITHUB_PAT ?? "",
+    pat: env.GITHUB_PAT ?? "",
     apiBase: "https://api.github.com",
   },
   server: {
-    port: Number(process.env.PORT ?? 3000),
+    port: Number(env.PORT),
   },
   inference: {
-    temperature: 0.3,
-    maxContextChars: Number(process.env.MAX_CONTEXT_CHARS ?? 8000),
+    temperature: 0.2,
+    maxContextChars: Number(env.MAX_CONTEXT_CHARS),
     numCtx: 8192,
-    numThread: process.env.OLLAMA_NUM_THREADS ? Number(process.env.OLLAMA_NUM_THREADS) : undefined,
   },
 }) as const;
