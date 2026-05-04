@@ -12,12 +12,11 @@ const TS_INTERFACE = `interface Portfolio {
     scale: { icon: "layers"; text: string };
     utility: { icon: "shield"; text: string };
   };
-  stack: Array<{
-    name: string;
-    role: "Primary" | "Supporting" | "Infrastructure";
-  }>;
+  stack: [
+    { name: string; role: "Primary" | "Supporting" | "Infrastructure" }
+  ]; // MUST generate between 1 and 6 items MAX. Only include the most critical technologies.
   stack_reason: string; // Explain why this stack was chosen in 1-2 sentences
-  architecture_diagram_code: string; // A valid Mermaid.js graph TD diagram (e.g. "graph TD\\n A-->B")
+  architecture_diagram_code: string; // A valid Mermaid.js graph TD diagram
   links: [
     { icon: "github"; label: string; url: string }
   ]; // MUST include at least one link
@@ -41,13 +40,12 @@ ${TS_INTERFACE}
 
 RULES (CRITICAL):
 1. THINK FIRST: You MUST write a multi-sentence architectural and system analysis in the \`_thinking\` field FIRST.
-2. NO HALLUCINATION: If specific quantitative data (like ms or percentages) is NOT present in the codebase, DO NOT invent fake numbers for the \`results\` object. Instead, describe qualitative architectural benefits (e.g., "Optimized inference pipeline for zero-latency execution").
-3. NO EMPTY FIELDS: You MUST generate actual, detailed content for \`stack_reason\`, \`architecture_diagram_code\`, and \`key_features\`. Do not leave them empty.
-4. COMPLEX DIAGRAM: \`architecture_diagram_code\` MUST contain a HIGHLY DETAILED Mermaid.js graph TD diagram. It MUST map the actual internal implementation files (e.g., mapping routes to modules to lib files). DO NOT just write abstract concepts like "Ingestion -> Inference". Draw the actual file-level data flow based on the File Tree. CRITICAL SYNTAX RULE: Use simple alphanumeric node IDs (A, B, C, D) and attach bracketed labels to them. Example: \`A["src/routes/generate.ts"] -->|Calls| B["src/modules/inference/cerebras.ts"]\`. NEVER use spaces or slashes in the node IDs themselves. NEVER use \`-->|Text|>\` (with a trailing bracket). ONLY use standard \`-->\` or \`-->|Text|\` arrows.
-5. NO PLACEHOLDERS: Do NOT use fake URLs like "yourusername" or "docs.example.com". Use the exact Repository URL provided in the prompt.
-6. LINKS: Provide actual absolute URLs to the repository.
-7. The \`stack\` array must ONLY contain technologies that are actually evidenced in the codebase files provided.
-8. Write as if presenting to a hiring manager at a top-tier tech company.`;
+2. STACK LIMIT: You MUST limit the \`stack\` array to a maximum of 6 items. Select only the most important technologies.
+3. ROLE-BASED ARCHITECTURE: The \`architecture_diagram_code\` MUST focus primarily on the components where the user made contributions (based on their "Role" and "Context"). If the user was not involved in a specific area (e.g., AI or Devops), do not emphasize it in the diagram. Focus on the structures they managed (e.g., Database schema, Frontend flow, API integration).
+4. COMPLEX DIAGRAM: \`architecture_diagram_code\` MUST be a HIGHLY DETAILED Mermaid.js graph TD diagram. It MUST map the actual internal implementation files and data structures (e.g., organizations, samples, DB tables). CRITICAL SYNTAX RULE: Use simple alphanumeric node IDs (A, B, C) and attach bracketed labels. Example: \`A["src/db/schema.ts"] -->|Defines| B["Organizations Table"]\`. NEVER use spaces in node IDs. NEVER use \`-->|Text|>\`.
+5. NO HALLUCINATION: If specific quantitative data is NOT present, describe qualitative architectural benefits instead. Do NOT invent fake numbers.
+6. NO PLACEHOLDERS: Use the exact Repository URL provided.
+7. Write as if presenting to a hiring manager at a top-tier tech company.`;
 }
 
 export function buildUserPrompt(context: InferenceContext): string {
