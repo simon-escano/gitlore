@@ -12,7 +12,7 @@ RULES:
 4. key_features must have between 1 and 5 items. Each must have a Lucide icon name (e.g. "zap", "shield", "layers").
 5. If you cannot determine a value with confidence, use a reasonable inference from the codebase — never leave a field empty.
 6. The results object must contain performance, scale, and utility — each with an icon (Lucide name) and descriptive text.
-7. All URLs in the links array must be real, valid URLs (e.g. the GitHub repo URL).
+7. All URLs in the links array must be real, absolute URLs starting with "https://" (e.g. "https://github.com/owner/repo"). If you are unsure, default to the GitHub repository URL.
 8. Write as if presenting to a hiring manager at a top-tier tech company.
 
 OUTPUT: Return ONLY the JSON object. No markdown fences. No explanation. No preamble.`;

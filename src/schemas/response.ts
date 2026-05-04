@@ -14,7 +14,7 @@ const ResultsSchema = z.object({
 const LinkSchema = z.object({
   icon: z.string(),
   label: z.string(),
-  url: z.string().url(),
+  url: z.string(), // Relaxed from .url() as LLMs sometimes omit https://
 });
 
 const FeatureSchema = z.object({
@@ -32,7 +32,7 @@ export const GitloreOutputSchema = z.object({
   stack: z.array(StackItemSchema).min(1),
   stack_reason: z.string(),
   architecture_diagram_code: z.string(),
-  gallery: z.array(z.string().url()).default([]),
+  gallery: z.array(z.string()).default([]), // Relaxed from .url()
   links: z.array(LinkSchema).min(1),
   key_features: z.array(FeatureSchema).min(1).max(5),
 });
