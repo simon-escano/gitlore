@@ -1,90 +1,79 @@
-# Gitlore
+# ⚡ Gitlore
+**High-performance Portfolio Intelligence API — Powered by Cerebras Cloud.**
 
-Local-first portfolio intelligence API. Transforms GitHub repositories into structured, high-impact portfolio case studies using AI that runs entirely on your machine.
+Gitlore transforms any GitHub repository into a structured, high-impact technical case study. By migrating from local CPU inference to **Cerebras Wafer-Scale inference**, Gitlore now generates production-grade architectural analysis in seconds rather than minutes.
 
-**Zero cloud cost. Zero API keys. Zero data leaving your machine.**
+> [!NOTE]
+> Gitlore was originally built for local-only LLM orchestration. While it now leverages Cerebras Cloud for speed, it maintains its "zero-cost" philosophy by utilizing the Cerebras Free Tier.
 
-## Stack
+## 🚀 Performance
+Results from sequential stress tests (Cerebras Llama 3.1-8B):
 
-- **Runtime:** Node.js + [Hono](https://hono.dev) + [@hono/node-server](https://github.com/honojs/node-server)
-- **Inference:** [Ollama](https://ollama.com) (local, `llama3.1:8b` default)
-- **Validation:** [Zod](https://zod.dev) schemas + Mermaid syntax checking
-- **Language:** TypeScript (strict mode)
+| Metric | Result |
+|--------|--------|
+| **Average Latency** | **8.68s** |
+| **Fastest Run** | **7.86s** |
+| **Throughput** | ~1,200 tokens/sec |
+| **Reliability** | 100% (5/5 successful runs) |
 
-## Prerequisites
+## 🛠️ Stack
+- **Inference:** [Cerebras Cloud](https://cloud.cerebras.ai) (Llama 3.1-8B)
+- **Runtime:** Node.js + [Hono](https://hono.dev)
+- **Validation:** [Zod](https://zod.dev) (Strict JSON enforcement)
+- **Visuals:** [Mermaid.js](https://mermaid.js.org) (Dynamic architecture mapping)
+- **Language:** TypeScript
 
-- **Arch Linux** (or any Linux)
-- **Node.js** ≥ 22 (via `fnm`)
-- **pnpm** (package manager)
-- **Ollama** installed and running
+## 📦 Setup
 
-```bash
-# Install Ollama (Arch)
-sudo pacman -S ollama
+1. **Get a Cerebras API Key:**
+   Sign up for free at [cloud.cerebras.ai](https://cloud.cerebras.ai).
 
-# Pull the default model (~4.7GB one-time download)
-ollama pull llama3.1:8b
-```
+2. **Clone & Install:**
+   ```bash
+   git clone https://github.com/simon-escano/gitlore.git
+   cd gitlore
+   pnpm install
+   ```
 
-## Setup
+3. **Configure Environment:**
+   Create a `.env` file based on `.env.example`:
+   ```env
+   CEREBRAS_API_KEY=your_key_here
+   CEREBRAS_MODEL=llama3.1-8b
+   ```
 
-```bash
-# Clone and install
-git clone https://github.com/yourusername/gitlore.git
-cd gitlore
-pnpm install
+4. **Start Development:**
+   ```bash
+   pnpm dev
+   ```
 
-# Configure (optional — defaults work out of the box)
-cp .env.example .env
-
-# Start Ollama daemon (Terminal 1)
-ollama serve
-
-# Start Gitlore (Terminal 2)
-pnpm dev
-```
-
-## Usage
+## 🎮 Usage
 
 ```bash
 curl -X POST http://localhost:3000/api/generate \
   -H "Content-Type: application/json" \
-  -d '{"owner":"denoland","repo":"deno"}'
+  -d '{
+    "url": "https://github.com/simon-escano/gitlore",
+    "title": "Gitlore - The Local AI Portfolio Builder",
+    "role": "Lead Architect",
+    "context": "Demonstrating high-performance LLM orchestration."
+  }'
 ```
 
-### Response
+### Response Features
+Returns a structured JSON payload ready for your portfolio site:
+- **`_thinking`**: Chain-of-thought architectural analysis.
+- **`architecture_diagram_code`**: File-level Mermaid.js system map.
+- **`results`**: Qualitative and quantitative impact metrics.
+- **`stack`**: Automatic tech stack discovery with roles.
+- **`key_features`**: High-impact feature highlights with Lucide icons.
 
-Returns a structured JSON portfolio case study with:
-- **Identity:** title, one-liner, contributions
-- **Impact:** problem, goal, results (performance/scale/utility)
-- **Tech Strategy:** stack breakdown with roles, reasoning
-- **Visualization:** Mermaid.js architecture diagram
-- **Execution:** links, key features with Lucide icons
-
-### Health Check
-
-```bash
-curl http://localhost:3000/
-```
-
-## Scripts
-
+## 📊 Scripts
 | Script | Description |
 |--------|-------------|
-| `pnpm dev` | Start dev server with hot reload (checks Ollama first) |
+| `pnpm dev` | Start dev server with hot reload |
 | `pnpm start` | Start production server |
-| `pnpm typecheck` | Run TypeScript type checking |
-| `pnpm run check:ollama` | Verify Ollama daemon is running |
-| `pnpm run health` | Check if Gitlore server is responding |
+| `pnpm tsx scripts/benchmark.ts` | Run the performance stress test suite |
 
-## Architecture
-
-```
-POST /api/generate → Ingestion → Inference → Validation → JSON Response
-```
-
-Three modules, synchronous pipeline, native `fetch()` everywhere. No SDKs, no cloud calls, no abstractions-for-abstractions.
-
-## License
-
+## 🛡️ License
 MIT

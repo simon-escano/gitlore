@@ -29,6 +29,7 @@ export function validateOutput(
   if (result.data.architecture_diagram_code) {
     const mermaid = validateMermaidSyntax(result.data.architecture_diagram_code);
     if (!mermaid.valid) {
+      console.warn(`  ├─ ⚠ Mermaid Validation Error: ${mermaid.error}`);
       // If the model hallucinated or output invalid mermaid, clear it rather than failing the whole API.
       result.data.architecture_diagram_code = "";
     }
