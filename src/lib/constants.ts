@@ -1,13 +1,17 @@
 export const ALLOWED_EXTENSIONS = [
   ".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs",
-  ".java", ".rb", ".vue", ".svelte", ".css", ".html", ".sql", ".prisma",
+  ".java", ".rb", ".vue", ".svelte", ".prisma",
 ];
 
 export const IGNORED_PATHS = [
   "node_modules/", "dist/", ".git/", ".next/", "__pycache__/",
   "vendor/", "target/", "build/", ".vscode/", ".idea/",
   "coverage/", ".turbo/", "pnpm-lock.yaml", "package-lock.json",
-  "yarn.lock", ".env", ".DS_Store",
+  "yarn.lock", ".env", ".DS_Store", "drizzle/", "migrations/",
+  "tests/", "spec/", "__tests__/", ".github/", ".config.",
+  "jest.config.", "tailwind.config.", "postcss.config.",
+  ".svg", ".png", ".jpg", ".jpeg", ".gif", ".ico",
+  ".css", ".scss", ".less",
 ];
 
 /** Files that are always included if they exist, regardless of budget */

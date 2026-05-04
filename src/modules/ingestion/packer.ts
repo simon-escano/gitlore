@@ -68,7 +68,15 @@ export async function ingestRepository(
   const sourcePaths = blobs
     .filter((b) => hasAllowedExtension(b.path))
     .filter((b) => !priorityPaths.includes(b.path) && !entryPaths.includes(b.path))
-    .sort((a, b) => a.size - b.size) // Smaller files first — more files in budget
+    .sort((a, b) => {
+      // 1. Prioritize shallower files (closer to root)
+      const depthA = a.path.split("/").length;
+      const depthB = b.path.split("/").length;
+      if (depthA !== depthB) return depthA - depthB;
+
+      // 2. Secondary: Smaller files first
+      return a.size - b.size;
+    })
     .map((b) => b.path);
 
   console.log(`  ├─ Tier 1 (priority): ${priorityPaths.length} files ${priorityPaths.length > 0 ? `[${priorityPaths.join(", ")}]` : ""}`);
