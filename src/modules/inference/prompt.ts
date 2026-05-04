@@ -1,6 +1,7 @@
 import type { InferenceContext } from "../ingestion/types";
 
 const TS_INTERFACE = `interface Portfolio {
+  _thinking: string; // REQUIRED: Analyze the codebase and plan your architectural diagram and stack here BEFORE filling out the rest.
   title: string; // A short, catchy title
   one_liner: string; // A single sentence summary
   contributions: string; // The role and contributions
@@ -28,7 +29,25 @@ const TS_INTERFACE = `interface Portfolio {
 }`;
 
 export function buildSystemPrompt(): string {
-  return `You are a Senior Technical Writer and Software Architect analyzing a GitHub repository.`;
+  return `You are a Senior Technical Writer and Software Architect analyzing a GitHub repository.
+
+Your task: analyze the provided GitHub repository and produce a structured portfolio case study.
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON object. Do not add markdown fences, explanations, or preambles.
+The JSON MUST strictly satisfy this TypeScript interface:
+
+${TS_INTERFACE}
+
+RULES (CRITICAL):
+1. THINK FIRST: You MUST write a multi-sentence architectural and system analysis in the \`_thinking\` field FIRST.
+2. NO EMPTY FIELDS: You MUST generate actual, detailed content for \`stack_reason\`, \`architecture_diagram_code\`, and \`key_features\`. Do not leave them empty.
+3. NO PLACEHOLDERS: Do NOT use fake URLs like "yourusername" or "docs.example.com". Use the exact Repository URL provided in the prompt.
+4. MERMAID DIAGRAM: \`architecture_diagram_code\` MUST contain a valid Mermaid.js graph TD diagram representing the codebase architecture.
+5. LINKS: Provide actual absolute URLs to the repository.
+6. Be specific and quantitative in the \`results\` object.
+7. The \`stack\` array must ONLY contain technologies that are actually evidenced in the codebase files provided.
+8. Write as if presenting to a hiring manager at a top-tier tech company.`;
 }
 
 export function buildUserPrompt(context: InferenceContext): string {
@@ -53,26 +72,5 @@ ${context.readme}
 ${context.packageInfo}
 
 ## Source Files (packed):
-${context.packedSource}
-
-================================================================================
-CRITICAL INSTRUCTIONS & OUTPUT FORMAT
-================================================================================
-
-Based on the repository code above, generate the structured case study JSON now.
-
-OUTPUT FORMAT:
-Return ONLY a valid JSON object. Do not add markdown fences, explanations, or preambles.
-The JSON MUST strictly satisfy this TypeScript interface:
-
-${TS_INTERFACE}
-
-RULES (CRITICAL):
-1. NO EMPTY FIELDS: You MUST generate actual, detailed content for \`stack_reason\`, \`architecture_diagram_code\`, and \`key_features\`. Do not leave them empty.
-2. NO PLACEHOLDERS: Do NOT use fake URLs like "yourusername" or "docs.example.com". Use the exact Repository URL provided in the prompt.
-3. MERMAID DIAGRAM: \`architecture_diagram_code\` MUST contain a valid Mermaid.js graph TD diagram representing the codebase architecture.
-4. LINKS: Provide actual absolute URLs to the repository.
-5. Be specific and quantitative in the \`results\` object.
-6. The \`stack\` array must ONLY contain technologies that are actually evidenced in the codebase files provided.
-7. Write as if presenting to a hiring manager at a top-tier tech company.`;
+${context.packedSource}`;
 }
