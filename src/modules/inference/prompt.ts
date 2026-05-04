@@ -14,8 +14,8 @@ const JSON_TEMPLATE = `{
   "stack": [
     { "name": "string", "role": "Primary | Supporting | Infrastructure" }
   ],
-  "stack_reason": "string",
-  "architecture_diagram_code": "string (valid mermaid graph TD)",
+  "stack_reason": "<explain why this tech stack was chosen based on the repo>",
+  "architecture_diagram_code": "graph TD\\n  A-->B",
   "gallery": [ "url string" ],
   "links": [
     { "icon": "lucide-icon-name", "label": "string", "url": "url string" }

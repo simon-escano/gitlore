@@ -73,6 +73,10 @@ generateRoute.post("/generate", async (c) => {
   }
   console.log(`   ✓ Schema + Mermaid validation passed`);
 
+  // Forcibly inject the user's gallery array back into the final payload
+  // so we don't rely on the 3B model to remember to copy it.
+  validation.data.gallery = gallery;
+
   const totalElapsed = ((Date.now() - requestStart) / 1000).toFixed(1);
   console.log(`\n${"─".repeat(60)}`);
   console.log(`✅ Case study generated for ${owner}/${repo} in ${totalElapsed}s`);
