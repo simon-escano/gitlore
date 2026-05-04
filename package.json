@@ -1,0 +1,25 @@
+{
+  "name": "gitlore",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Local-first portfolio intelligence API — zero cloud cost",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "check:ollama": "curl -sf http://127.0.0.1:11434/api/tags > /dev/null && echo '✓ Ollama running' || echo '✗ Start Ollama: ollama serve'",
+    "predev": "pnpm run check:ollama",
+    "health": "curl -sf http://localhost:3000/ && echo ' ✓ OK' || echo ' ✗ Down'"
+  },
+  "dependencies": {
+    "hono": "^4",
+    "@hono/node-server": "^1",
+    "zod": "^3",
+    "zod-to-json-schema": "^3"
+  },
+  "devDependencies": {
+    "tsx": "^4",
+    "typescript": "^5",
+    "@types/node": "^22"
+  }
+}
