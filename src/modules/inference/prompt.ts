@@ -1,27 +1,29 @@
 import type { InferenceContext } from "../ingestion/types";
 
 const JSON_TEMPLATE = `{
-  "title": "string",
-  "one_liner": "string",
-  "contributions": "string",
-  "problem": "string",
-  "goal": "string",
+  "title": "Gitlore Portfolio Generator",
+  "one_liner": "A local AI tool to generate case studies.",
+  "contributions": "Lead Developer",
+  "problem": "Manual portfolio creation takes too long.",
+  "goal": "Automate case study generation using local LLMs.",
   "results": {
-    "performance": { "icon": "lucide-icon-name", "text": "string" },
-    "scale": { "icon": "lucide-icon-name", "text": "string" },
-    "utility": { "icon": "lucide-icon-name", "text": "string" }
+    "performance": { "icon": "zap", "text": "Reduced cold start from 2.4s to 180ms" },
+    "scale": { "icon": "layers", "text": "Processes 10k files efficiently" },
+    "utility": { "icon": "shield", "text": "Zero cloud costs and full privacy" }
   },
   "stack": [
-    { "name": "string", "role": "Primary | Supporting | Infrastructure" }
+    { "name": "TypeScript", "role": "Primary" },
+    { "name": "Node.js", "role": "Infrastructure" }
   ],
-  "stack_reason": "<explain why this tech stack was chosen based on the repo>",
-  "architecture_diagram_code": "graph TD\\n  A-->B",
-  "gallery": [ "url string" ],
+  "stack_reason": "TypeScript provides type safety and Node.js offers a fast runtime for local API orchestration.",
+  "architecture_diagram_code": "graph TD\\n  A[API Request] --> B[Ingestion]\\n  B --> C[Ollama LLM]\\n  C --> D[Zod Validation]",
+  "gallery": [],
   "links": [
-    { "icon": "lucide-icon-name", "label": "string", "url": "url string" }
+    { "icon": "github", "label": "GitHub Repo", "url": "https://github.com/simon-escano/gitlore" }
   ],
   "key_features": [
-    { "icon": "lucide-icon-name", "text": "string" }
+    { "icon": "zap", "text": "Blazing fast local inference" },
+    { "icon": "lock", "text": "100% private architecture" }
   ]
 }`;
 
@@ -42,7 +44,9 @@ RULES:
 9. You MUST copy the exact URLs provided in the Gallery section directly into the output JSON's gallery array. Do not invent gallery URLs.
 10. Write as if presenting to a hiring manager at a top-tier tech company.
 
-OUTPUT: Return ONLY a valid JSON object matching the exact structure below. Do not add markdown fences, explanations, or preambles.
+OUTPUT FORMAT:
+Return ONLY a valid JSON object. Do not add markdown fences, explanations, or preambles.
+The JSON must strictly follow this exact structure and field names (replace the example values with your generated content):
 ${JSON_TEMPLATE}`;
 }
 
