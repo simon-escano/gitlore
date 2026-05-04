@@ -16,16 +16,15 @@ const TS_INTERFACE = `interface Portfolio {
     role: "Primary" | "Supporting" | "Infrastructure";
   }>;
   stack_reason: string; // Explain why this stack was chosen in 1-2 sentences
-  architecture_diagram_code: string; // A valid Mermaid.js graph TD diagram
-  links: Array<{
-    icon: "github" | "link";
-    label: string;
-    url: string;
-  }>;
-  key_features: Array<{
-    icon: string; // A lucide icon name like "zap", "shield", "lock"
-    text: string; // Feature description
-  }>;
+  architecture_diagram_code: string; // A valid Mermaid.js graph TD diagram (e.g. "graph TD\\n A-->B")
+  links: [
+    { icon: "github"; label: string; url: string }
+  ]; // MUST include at least one link
+  key_features: [
+    { icon: string; text: string },
+    { icon: string; text: string },
+    { icon: string; text: string }
+  ]; // MUST generate exactly 3 features
 }`;
 
 export function buildSystemPrompt(): string {

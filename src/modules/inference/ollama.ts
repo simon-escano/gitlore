@@ -37,6 +37,7 @@ export async function analyzeWithOllama(
     options: {
       temperature: config.inference.temperature,
       num_thread: config.inference.numThread,
+      num_predict: 4000,
     },
   };
 
