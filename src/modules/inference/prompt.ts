@@ -1,4 +1,4 @@
-import type { RepoContext } from "../ingestion/types";
+import type { InferenceContext } from "../ingestion/types";
 
 export function buildSystemPrompt(): string {
   return `You are a Senior Technical Writer and Software Architect.
@@ -13,15 +13,23 @@ RULES:
 5. If you cannot determine a value with confidence, use a reasonable inference from the codebase — never leave a field empty.
 6. The results object must contain performance, scale, and utility — each with an icon (Lucide name) and descriptive text.
 7. All URLs in the links array must be real, absolute URLs starting with "https://" (e.g. "https://github.com/owner/repo"). If you are unsure, default to the GitHub repository URL.
-8. Write as if presenting to a hiring manager at a top-tier tech company.
+8. The output must strictly adopt the provided Title and Role/Contributions. Write the case study from the perspective of someone in that Role.
+9. You MUST copy the exact URLs provided in the Gallery section directly into the output JSON's gallery array. Do not invent gallery URLs.
+10. Write as if presenting to a hiring manager at a top-tier tech company.
 
 OUTPUT: Return ONLY the JSON object. No markdown fences. No explanation. No preamble.`;
 }
 
-export function buildUserPrompt(context: RepoContext): string {
+export function buildUserPrompt(context: InferenceContext): string {
   const fileTreeSample = context.fileTree.slice(0, 50).join("\n");
 
   return `Analyze this repository and generate a portfolio case study.
+
+## Target Output Identity
+Title: ${context.title}
+My Role / Contributions: ${context.role}
+Additional Context: ${context.context ?? "None provided"}
+Gallery URLs to include: ${context.gallery.length ? context.gallery.join(", ") : "[]"}
 
 ## Repository: ${context.owner}/${context.repo}
 ## Description: ${context.description ?? "No description provided"}

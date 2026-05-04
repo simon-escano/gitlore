@@ -4,7 +4,7 @@ import { buildSystemPrompt, buildUserPrompt } from "./prompt";
 import { GitloreOutputSchema } from "../../schemas/response";
 import { Errors } from "../../lib/errors";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import type { RepoContext } from "../ingestion/types";
+import type { InferenceContext } from "../ingestion/types";
 import type { GitloreOutput } from "../../schemas/response";
 
 // Convert Zod schema to JSON Schema for Ollama's `format` field.
@@ -29,7 +29,7 @@ interface OllamaStreamChunk {
 }
 
 export async function analyzeWithOllama(
-  context: RepoContext
+  context: InferenceContext
 ): Promise<GitloreOutput> {
   const startTime = Date.now();
 

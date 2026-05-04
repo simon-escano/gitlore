@@ -14,6 +14,13 @@ export interface RepoContext {
   packedSource: string;
 }
 
+export interface InferenceContext extends RepoContext {
+  title: string;
+  role: string;
+  context?: string;
+  gallery: string[];
+}
+
 export interface GitHubTreeResponse {
   sha: string;
   url: string;

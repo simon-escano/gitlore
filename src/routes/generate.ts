@@ -25,11 +25,22 @@ generateRoute.post("/generate", async (c) => {
     );
   }
 
-  const { owner, repo, context } = parsed.data;
+  const { url, title, role, context, gallery } = parsed.data;
+
+  // Extract owner and repo from URL
+  const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
+  if (!match) {
+    throw Errors.invalidInput(
+      "URL must be a valid GitHub repository URL (e.g., https://github.com/owner/repo)"
+    );
+  }
+  const owner = match[1];
+  const repo = match[2].replace(/\.git$/, "");
 
   console.log(`\n${"═".repeat(60)}`);
   console.log(`⚡ POST /api/generate — ${owner}/${repo}`);
   console.log(`   ${new Date().toISOString()}`);
+  console.log(`   Title: "${title}" | Role: "${role}"`);
   if (context) console.log(`   Context: "${context.slice(0, 80)}${context.length > 80 ? "..." : ""}"`);
   console.log(`${"─".repeat(60)}`);
 
@@ -41,9 +52,17 @@ generateRoute.post("/generate", async (c) => {
     `\n📦 Ingested: ${repoContext.fileTree.length} files discovered, ${repoContext.packedSource.length.toLocaleString()} chars packed`
   );
 
+  const inferenceContext = {
+    ...repoContext,
+    title,
+    role,
+    context,
+    gallery,
+  };
+
   // Step 2: Run inference
   console.log(`\n🧠 STEP 2/3: Inference`);
-  const output = await analyzeWithOllama(repoContext);
+  const output = await analyzeWithOllama(inferenceContext);
 
   // Step 3: Validate output (second Zod pass + Mermaid check)
   console.log(`\n✔  STEP 3/3: Validation`);
