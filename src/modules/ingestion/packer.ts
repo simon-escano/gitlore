@@ -29,13 +29,20 @@ export async function ingestRepository(
   owner: string,
   repo: string
 ): Promise<RepoContext> {
+  const startTime = Date.now();
+
   // Fetch metadata and README in parallel
+  console.log(`  ├─ Fetching repo metadata and README...`);
   const [meta, readme] = await Promise.all([
     fetchRepoMeta(owner, repo),
     fetchReadme(owner, repo),
   ]);
+  console.log(`  ├─ Repo: ${meta.full_name} (${meta.language ?? "unknown lang"}, ⭐ ${meta.stargazers_count})`);
+  console.log(`  ├─ Branch: ${meta.default_branch}`);
+  console.log(`  ├─ README: ${readme.length} chars`);
 
   // Fetch file tree
+  console.log(`  ├─ Fetching file tree...`);
   const tree = await fetchFileTree(owner, repo, meta.default_branch);
 
   // Filter to blobs only, exclude ignored paths
@@ -44,6 +51,7 @@ export async function ingestRepository(
     .map((e) => ({ path: e.path, size: e.size ?? 0 }));
 
   const fileTree = blobs.map((b) => b.path);
+  console.log(`  ├─ File tree: ${tree.tree.length} total → ${blobs.length} after filtering`);
 
   // Tier 1: Priority files (package.json, go.mod, etc.)
   const priorityPaths = blobs
@@ -63,15 +71,25 @@ export async function ingestRepository(
     .sort((a, b) => a.size - b.size) // Smaller files first — more files in budget
     .map((b) => b.path);
 
+  console.log(`  ├─ Tier 1 (priority): ${priorityPaths.length} files ${priorityPaths.length > 0 ? `[${priorityPaths.join(", ")}]` : ""}`);
+  console.log(`  ├─ Tier 2 (entry pts): ${entryPaths.length} files ${entryPaths.length > 0 ? `[${entryPaths.join(", ")}]` : ""}`);
+  console.log(`  ├─ Tier 3 (source):    ${sourcePaths.length} files`);
+
   // Pack files in priority order within the character budget
   const budget = config.inference.maxContextChars;
   let packed = "";
   let packageInfo = "";
+  let packedCount = 0;
 
   const orderedPaths = [...priorityPaths, ...entryPaths, ...sourcePaths];
 
+  console.log(`  ├─ Packing files (budget: ${budget.toLocaleString()} chars)...`);
+
   for (const filePath of orderedPaths) {
-    if (packed.length >= budget) break;
+    if (packed.length >= budget) {
+      console.log(`  │  ⚠ Budget reached, stopping.`);
+      break;
+    }
 
     const content = await fetchFileContent(owner, repo, filePath);
     if (!content) continue;
@@ -91,8 +109,14 @@ export async function ingestRepository(
 
     if (packed.length + block.length <= budget) {
       packed += block;
+      packedCount++;
+      const pct = ((packed.length / budget) * 100).toFixed(0);
+      console.log(`  │  ✓ ${filePath} (+${content.length} chars, ${pct}% budget used)`);
     }
   }
+
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`  └─ Ingestion complete: ${packedCount} files packed, ${packed.length.toLocaleString()} chars in ${elapsed}s`);
 
   return {
     owner,
