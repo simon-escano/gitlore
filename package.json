@@ -4,8 +4,8 @@
   "type": "module",
   "description": "Local-first portfolio intelligence API — zero cloud cost",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "start": "tsx --env-file=.env src/index.ts",
     "typecheck": "tsc --noEmit",
     "check:ollama": "curl -sf http://127.0.0.1:11434/api/tags > /dev/null && echo '✓ Ollama running' || echo '✗ Start Ollama: ollama serve'",
     "predev": "pnpm run check:ollama",
