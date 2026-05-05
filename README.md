@@ -111,14 +111,14 @@ The API has two endpoints:
 ```bash
 curl -X POST https://api.gitlore.workers.dev/api/generate \
   -H "Content-Type: application/json" \
-  -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "role": "Lead Dev" }'
+  -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "contributions": "Built the API and database layer" }'
 ```
 
 ### Streaming (SSE with progress events)
 ```bash
 curl -N -X POST https://api.gitlore.workers.dev/api/generate/stream \
   -H "Content-Type: application/json" \
-  -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "role": "Lead Dev" }'
+  -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "contributions": "Built the API and database layer" }'
 ```
 
 ## 🎨 Customizing the Portfolio Layout

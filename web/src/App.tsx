@@ -7,12 +7,12 @@ import { ProgressFeed } from "./components/progress/ProgressFeed";
 import { OutputTabs } from "./components/output/OutputTabs";
 import { useQueue } from "./lib/queue";
 import { streamGenerate } from "./lib/api";
+import { Zap, ArrowDown } from "lucide-react";
 import type { GenerateRequest, ProgressEvent, GitloreOutput, QueueItem } from "./types/gitlore";
 
 export default function App() {
   const queue = useQueue();
 
-  // Direct (non-queue) generation state
   const [progress, setProgress] = useState<ProgressEvent[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<GitloreOutput | null>(null);
@@ -25,23 +25,13 @@ export default function App() {
     setIsGenerating(true);
 
     streamGenerate(req, {
-      onProgress: (event) => {
-        setProgress((prev) => [...prev, event]);
-      },
-      onResult: (data) => {
-        setResult(data);
-        setIsGenerating(false);
-      },
-      onError: (msg) => {
-        setError(msg);
-        setIsGenerating(false);
-      },
+      onProgress: (event) => setProgress((prev) => [...prev, event]),
+      onResult: (data) => { setResult(data); setIsGenerating(false); },
+      onError: (msg) => { setError(msg); setIsGenerating(false); },
     });
   };
 
-  const handleAddToQueue = (req: GenerateRequest) => {
-    queue.addItem(req);
-  };
+  const handleAddToQueue = (req: GenerateRequest) => queue.addItem(req);
 
   const handleSelectQueueItem = (item: QueueItem) => {
     if (item.result) {
@@ -57,60 +47,83 @@ export default function App() {
     }
   };
 
-  // Show progress from the active queue item while processing
   const activeQueueItem = queue.items.find((i) => i.id === queue.activeId);
   const displayProgress = activeQueueItem?.status === "processing" ? activeQueueItem.progress : progress;
   const displayIsActive = isGenerating || activeQueueItem?.status === "processing";
+
+  const hasOutput = result || error || displayProgress.length > 0;
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8">
-        <div className="space-y-6">
-          {/* Hero text */}
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-(--color-text)">
-              Portfolio Intelligence
-            </h2>
-            <p className="mt-2 text-(--color-text-secondary)">
-              Transform any GitHub repository into a structured portfolio case study
-            </p>
-          </div>
-
-          {/* Input Form */}
-          <div className="rounded-xl border border-(--color-border) bg-(--color-surface) p-5">
-            <GenerateForm
-              onSubmit={handleSubmit}
-              onAddToQueue={handleAddToQueue}
-              disabled={isGenerating}
-            />
-          </div>
-
-          {/* Bulk Queue */}
-          <BulkQueue
-            items={queue.items}
-            activeId={queue.activeId}
-            onStart={queue.startQueue}
-            onRemove={queue.removeItem}
-            onClearDone={queue.clearDone}
-            onCancel={queue.cancelCurrent}
-            onSelect={handleSelectQueueItem}
-          />
-
-          {/* Progress Feed */}
-          <ProgressFeed events={displayProgress} isActive={!!displayIsActive} />
-
-          {/* Error */}
-          {error && (
-            <div className="rounded-xl border border-(--color-error)/30 bg-(--color-error-subtle) p-4">
-              <p className="text-sm font-medium text-(--color-error)">{error}</p>
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="relative overflow-hidden border-b border-(--color-border)">
+          <div className="absolute inset-0 bg-gradient-to-b from-(--color-accent)/[0.03] to-transparent" />
+          <div className="relative mx-auto max-w-7xl px-6 py-16 sm:py-20">
+            <div className="flex items-center gap-2 text-(--color-accent)">
+              <Zap className="h-4 w-4" />
+              <span className="text-xs font-medium uppercase tracking-widest">Portfolio Intelligence</span>
             </div>
-          )}
+            <h2 className="mt-4 max-w-xl text-4xl font-semibold tracking-tight text-(--color-text) sm:text-5xl">
+              Turn repos into case studies
+            </h2>
+            <p className="mt-3 max-w-lg text-base text-(--color-text-secondary)">
+              Analyze any GitHub repository and generate a structured, high-impact portfolio piece — powered by Cerebras inference on Cloudflare's edge.
+            </p>
+            <div className="mt-6">
+              <a href="#workspace" className="inline-flex items-center gap-1.5 text-sm font-medium text-(--color-accent) transition-colors hover:text-(--color-accent-hover)">
+                Get started
+                <ArrowDown className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+        </section>
 
-          {/* Output */}
-          {result && <OutputTabs data={result} />}
-        </div>
+        {/* Workspace — side-by-side on desktop */}
+        <section id="workspace" className="mx-auto max-w-7xl px-6 py-8">
+          <div className={`grid gap-6 ${hasOutput ? "lg:grid-cols-[380px_1fr]" : "max-w-lg mx-auto"}`}>
+            {/* Left: Input panel */}
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-5">
+                <GenerateForm
+                  onSubmit={handleSubmit}
+                  onAddToQueue={handleAddToQueue}
+                  disabled={isGenerating}
+                />
+              </div>
+
+              <BulkQueue
+                items={queue.items}
+                activeId={queue.activeId}
+                onStart={queue.startQueue}
+                onRemove={queue.removeItem}
+                onClearDone={queue.clearDone}
+                onCancel={queue.cancelCurrent}
+                onSelect={handleSelectQueueItem}
+              />
+
+              {/* Progress feed — in sidebar on desktop */}
+              {(displayProgress.length > 0 || displayIsActive) && (
+                <ProgressFeed events={displayProgress} isActive={!!displayIsActive} />
+              )}
+            </div>
+
+            {/* Right: Output panel */}
+            {hasOutput && (
+              <div className="space-y-4 animate-fade-up min-w-0">
+                {error && (
+                  <div className="rounded-2xl border border-(--color-error)/20 bg-(--color-error-subtle) p-4">
+                    <p className="text-sm font-medium text-(--color-error)">{error}</p>
+                  </div>
+                )}
+
+                {result && <OutputTabs data={result} />}
+              </div>
+            )}
+          </div>
+        </section>
       </main>
 
       <Footer />

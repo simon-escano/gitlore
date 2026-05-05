@@ -51,7 +51,7 @@ export interface ProgressEvent {
 export interface GenerateRequest {
   url: string;
   title: string;
-  role: string;
+  contributions: string;
   context?: string;
   gallery?: string[];
 }
