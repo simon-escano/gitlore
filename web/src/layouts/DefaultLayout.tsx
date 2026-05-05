@@ -32,8 +32,8 @@ function getRoleColor(role: string) {
 }
 
 /**
- * Robust Mermaid syntax sanitizer to catch common LLM formatting slips.
- * Ensures node labels with spaces or punctuation (especially parentheses) are quoted.
+ * Normalizes and sanitizes Mermaid syntax to prevent rendering errors.
+ * Recursively cleans inner quotes, bracket labels, and unquoted special chars.
  */
 function cleanMermaidCode(code: string): string {
   let cleaned = code.trim();
@@ -47,17 +47,30 @@ function cleanMermaidCode(code: string): string {
     return match;
   });
 
-  // Replace unquoted parenthesis labels with quoted labels
-  // e.g. A(Database Server) -> A["Database Server"]
-  cleaned = cleaned.replace(/\b([a-zA-Z0-9_-]+)\s*\(([^"\)\n]+?)\)/g, (match, id, label) => {
-    if (!label.startsWith('"') || !label.endsWith('"')) {
-      const upperLabel = label.toUpperCase();
-      // Leave flowchart directions like LR, TD, TB alone
-      if (upperLabel !== "LR" && upperLabel !== "TD" && upperLabel !== "TB" && upperLabel !== "RL" && upperLabel !== "BT") {
-        return `${id}["${label.replace(/"/g, '\\"')}"]`;
-      }
+  // Handle nested/improper quotes inside square brackets: ID["Browser["React SPA"]"] -> ID["Browser['React SPA']"]
+  cleaned = cleaned.replace(/\b([a-zA-Z0-9_-]+)\s*\[(.*?)\]/g, (_match, id, label) => {
+    let inner = label.trim();
+    if (inner.startsWith('"') && inner.endsWith('"')) {
+      inner = inner.slice(1, -1);
     }
-    return match;
+    inner = inner.replace(/"/g, "'");
+    return `${id}["${inner}"]`;
+  });
+
+  // Handle nested/improper quotes inside parentheses: ID(Browser (React SPA)) -> ID["Browser (React SPA)"]
+  cleaned = cleaned.replace(/\b([a-zA-Z0-9_-]+)\s*\((.*?)\)/g, (_match, id, label) => {
+    let inner = label.trim();
+    const upperLabel = inner.toUpperCase();
+    
+    if (upperLabel === "LR" || upperLabel === "TD" || upperLabel === "TB" || upperLabel === "RL" || upperLabel === "BT") {
+      return _match;
+    }
+    
+    if (inner.startsWith('"') && inner.endsWith('"')) {
+      inner = inner.slice(1, -1);
+    }
+    inner = inner.replace(/"/g, "'");
+    return `${id}["${inner}"]`;
   });
 
   return cleaned;
@@ -106,8 +119,8 @@ function MermaidDiagram({ code }: { code: string }) {
           setError((err as Error).message || "Mermaid rendering failed");
           if (containerRef.current) {
             containerRef.current.innerHTML = `
-              <div className="rounded-lg bg-red-50/50 dark:bg-red-950/10 p-3 border border-red-100 dark:border-red-900/20">
-                <p className="text-xs text-red-600 dark:text-red-400 font-mono whitespace-pre-wrap">${code}</p>
+              <div class="rounded-lg bg-red-50/50 dark:bg-red-950/10 p-3 border border-red-100 dark:border-red-900/20">
+                <p class="text-xs text-red-600 dark:text-red-400 font-mono whitespace-pre-wrap">${code}</p>
               </div>
             `;
           }
@@ -200,80 +213,81 @@ export function DefaultLayout({ data }: Props) {
         )}
       </div>
 
-      {/* Main Bento Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Main Balanced Bento Grid */}
+      <div className="space-y-4">
         
-        {/* Row 1, Block 1: Problem & Goal connected visually (Spans 2 columns on desktop) */}
-        {(data.problem || data.goal) && (
-          <div className="md:col-span-2 flex flex-col md:flex-row items-stretch rounded-2xl border border-(--color-border) bg-(--color-surface) overflow-hidden transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
-            {data.problem && (
-              <div className="flex-1 p-6 bg-gradient-to-br from-red-500/[0.03] via-transparent to-transparent">
-                <SectionLabel>Problem Space</SectionLabel>
-                <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
-                  {data.problem}
-                </p>
-              </div>
-            )}
-            
-            {data.problem && data.goal && (
-              <div className="flex md:flex-col items-center justify-center bg-zinc-50/50 dark:bg-zinc-900/20 px-4 py-2 border-y md:border-y-0 md:border-x border-(--color-border)">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-(--color-bg) border border-(--color-border) shadow-sm">
-                  <ArrowRight className="hidden md:block h-4 w-4 text-zinc-400" />
-                  <ArrowDown className="block md:hidden h-4 w-4 text-zinc-400" />
+        {/* Row 1: Problem/Goal (2/3 width) and Tech Stack (1/3 width) */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {(data.problem || data.goal) && (
+            <div className="md:col-span-2 flex flex-col md:flex-row items-stretch rounded-2xl border border-(--color-border) bg-(--color-surface) overflow-hidden transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+              {data.problem && (
+                <div className="flex-1 p-6 bg-gradient-to-br from-red-500/[0.03] via-transparent to-transparent">
+                  <SectionLabel>Problem Space</SectionLabel>
+                  <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
+                    {data.problem}
+                  </p>
                 </div>
-              </div>
-            )}
-            
-            {data.goal && (
-              <div className="flex-1 p-6 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-transparent">
-                <SectionLabel>Target Outcome</SectionLabel>
-                <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
-                  {data.goal}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Row 1, Block 2: Tech Stack (Spans 1 column on desktop) */}
-        {data.stack.length > 0 && (
-          <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
-            <SectionLabel>Technology Blueprint</SectionLabel>
-            <div className="space-y-4">
-              {sortedGroups.map((role) => {
-                const items = stackGroups[role];
-                const rc = getRoleColor(role);
-                return (
-                  <div key={role} className="space-y-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`h-1.5 w-1.5 rounded-full ${rc.dot}`} />
-                      <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">{role}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {items.map((s, i) => (
-                        <span
-                          key={i}
-                          className={`rounded-lg px-2.5 py-1 text-xs font-medium ${rc.bg} ${rc.text}`}
-                        >
-                          {s.name}
-                        </span>
-                      ))}
-                    </div>
+              )}
+              
+              {data.problem && data.goal && (
+                <div className="flex md:flex-col items-center justify-center bg-zinc-50/50 dark:bg-zinc-900/20 px-4 py-2 border-y md:border-y-0 md:border-x border-(--color-border)">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-(--color-bg) border border-(--color-border) shadow-sm">
+                    <ArrowRight className="hidden md:block h-4 w-4 text-zinc-400" />
+                    <ArrowDown className="block md:hidden h-4 w-4 text-zinc-400" />
                   </div>
-                );
-              })}
+                </div>
+              )}
+              
+              {data.goal && (
+                <div className="flex-1 p-6 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-transparent">
+                  <SectionLabel>Target Outcome</SectionLabel>
+                  <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
+                    {data.goal}
+                  </p>
+                </div>
+              )}
             </div>
-            {data.stack_reason && (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 italic leading-relaxed pt-2 border-t border-(--color-border)">
-                {data.stack_reason}
-              </p>
-            )}
-          </div>
-        )}
+          )}
 
-        {/* Row 2, Block 1: Architecture Diagram (Spans 2 columns on desktop) */}
+          {data.stack.length > 0 && (
+            <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+              <SectionLabel>Technology Blueprint</SectionLabel>
+              <div className="space-y-4">
+                {sortedGroups.map((role) => {
+                  const items = stackGroups[role];
+                  const rc = getRoleColor(role);
+                  return (
+                    <div key={role} className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`h-1.5 w-1.5 rounded-full ${rc.dot}`} />
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">{role}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {items.map((s, i) => (
+                          <span
+                            key={i}
+                            className={`rounded-lg px-2.5 py-1 text-xs font-medium ${rc.bg} ${rc.text}`}
+                          >
+                            {s.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {data.stack_reason && (
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 italic leading-relaxed pt-2 border-t border-(--color-border)">
+                  {data.stack_reason}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Row 2: Architecture Diagram (Full Width - Spans all 3 columns) */}
         {data.architecture_diagram_code && (
-          <div className="md:col-span-2 rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+          <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
             <div className="flex items-center justify-between">
               <SectionLabel>System Architecture</SectionLabel>
               <CopyButton text={data.architecture_diagram_code} label="Mermaid Code" />
@@ -284,34 +298,31 @@ export function DefaultLayout({ data }: Props) {
           </div>
         )}
 
-        {/* Row 2, Block 2: Performance Metrics (Spans 1 column on desktop) */}
+        {/* Row 3: Core Metrics (Horizontal 3-column row) */}
         {data.results && (
-          <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
-            <SectionLabel>Core Metrics</SectionLabel>
-            <div className="grid gap-3">
-              {(["performance", "scale", "utility"] as const).map((key) => {
-                const metric = data.results[key];
-                if (!metric?.text) return null;
-                const Icon = getIcon(metric.icon);
-                return (
-                  <div key={key} className="flex items-start gap-3.5 rounded-xl border border-zinc-100 dark:border-zinc-900/40 bg-zinc-50/30 dark:bg-zinc-900/10 p-3.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/30">
-                      <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 capitalize">{key}</p>
-                      <p className="text-sm text-(--color-text) font-normal leading-relaxed">{metric.text}</p>
-                    </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {(["performance", "scale", "utility"] as const).map((key) => {
+              const metric = data.results[key];
+              if (!metric?.text) return null;
+              const Icon = getIcon(metric.icon);
+              return (
+                <div key={key} className="flex items-start gap-4 rounded-2xl border border-(--color-border) bg-(--color-surface) p-5 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/30">
+                    <Icon className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" />
                   </div>
-                );
-              })}
-            </div>
+                  <div className="space-y-0.5">
+                    <SectionLabel>{key}</SectionLabel>
+                    <p className="text-sm text-(--color-text) font-normal leading-relaxed">{metric.text}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {/* Row 3: Key Features (Spans all 3 columns as 3 side-by-side bento cards) */}
+        {/* Row 4: Key Features (Horizontal 3-column row) */}
         {data.key_features.length > 0 && (
-          <div className="md:col-span-3 grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-3">
             {data.key_features.map((f, i) => {
               const Icon = getIcon(f.icon);
               return (

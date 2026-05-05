@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
 import { GenerateForm } from "./components/input/GenerateForm";
@@ -12,6 +12,7 @@ import type { GenerateRequest, ProgressEvent, GitloreOutput, QueueItem } from ".
 
 export default function App() {
   const queue = useQueue();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [progress, setProgress] = useState<ProgressEvent[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -27,11 +28,33 @@ export default function App() {
     // Smooth scroll down to workspace
     document.getElementById("workspace")?.scrollIntoView({ behavior: "smooth" });
 
-    streamGenerate(req, {
+    const controller = streamGenerate(req, {
       onProgress: (event) => setProgress((prev) => [...prev, event]),
-      onResult: (data) => { setResult(data); setIsGenerating(false); },
-      onError: (msg) => { setError(msg); setIsGenerating(false); },
+      onResult: (data) => {
+        setResult(data);
+        setIsGenerating(false);
+        abortControllerRef.current = null;
+      },
+      onError: (msg) => {
+        setError(msg);
+        setIsGenerating(false);
+        abortControllerRef.current = null;
+      },
     });
+
+    abortControllerRef.current = controller;
+  };
+
+  const handleCancelDirect = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsGenerating(false);
+    setProgress((prev) => [
+      ...prev,
+      { phase: "validation", message: "Generation cancelled by user", detail: "Active stream aborted." }
+    ]);
   };
 
   const handleAddToQueue = (req: GenerateRequest) => queue.addItem(req);
@@ -54,7 +77,8 @@ export default function App() {
   const displayProgress = activeQueueItem?.status === "processing" ? activeQueueItem.progress : progress;
   const displayIsActive = isGenerating || activeQueueItem?.status === "processing";
 
-  const hasOutput = result || error || displayProgress.length > 0;
+  // The split screen is active only when we have a completed, readable output (either success or failed run)
+  const hasCompletedOutput = (result || error) && !displayIsActive;
 
   return (
     <div className="flex min-h-screen flex-col bg-grid-pattern bg-(--color-bg)">
@@ -95,55 +119,71 @@ export default function App() {
           </div>
         </section>
 
-        {/* Workspace Grid Area */}
-        <section id="workspace" className="mx-auto max-w-7xl px-6 py-12 border-t border-(--color-border)/60">
-          <div className={`grid gap-8 transition-all duration-500 ${hasOutput ? "lg:grid-cols-[380px_1fr]" : "max-w-xl mx-auto"}`}>
-            
-            {/* Left Side: Inputs, Queue & Progress Log */}
-            <div className="space-y-5">
-              <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)] dark:shadow-none">
-                <div className="mb-4 pb-4 border-b border-(--color-border)/60">
-                  <h3 className="text-sm font-medium text-(--color-text)">New Pipeline</h3>
-                  <p className="text-xs text-zinc-400">Ingest, analyze and format your case study.</p>
+        {/* Horizontal dividing separator spanning the full width of the page */}
+        <div className="w-full border-t border-(--color-border)/60">
+          {/* Workspace Grid Area */}
+          <section id="workspace" className="mx-auto max-w-7xl px-6 py-12">
+            <div className={`grid gap-8 transition-all duration-500 ${hasCompletedOutput ? "lg:grid-cols-[380px_1fr]" : "max-w-xl mx-auto"}`}>
+              
+              {/* Left Side: Inputs, Queue & Progress Log */}
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)] dark:shadow-none">
+                  <div className="mb-4 pb-4 border-b border-(--color-border)/60">
+                    <h3 className="text-sm font-medium text-(--color-text)">New Pipeline</h3>
+                    <p className="text-xs text-zinc-400">Ingest, analyze and format your case study.</p>
+                  </div>
+                  <GenerateForm
+                    onSubmit={handleSubmit}
+                    onAddToQueue={handleAddToQueue}
+                    disabled={displayIsActive}
+                  />
                 </div>
-                <GenerateForm
-                  onSubmit={handleSubmit}
-                  onAddToQueue={handleAddToQueue}
-                  disabled={isGenerating}
+
+                <BulkQueue
+                  items={queue.items}
+                  activeId={queue.activeId}
+                  onStart={queue.startQueue}
+                  onRemove={queue.removeItem}
+                  onClearDone={queue.clearDone}
+                  onCancel={queue.cancelCurrent}
+                  onSelect={handleSelectQueueItem}
                 />
+
+                {/* Docked post-generation logs shown in the left sidebar once loaded */}
+                {!displayIsActive && displayProgress.length > 0 && (
+                  <ProgressFeed events={displayProgress} isActive={false} />
+                )}
               </div>
 
-              <BulkQueue
-                items={queue.items}
-                activeId={queue.activeId}
-                onStart={queue.startQueue}
-                onRemove={queue.removeItem}
-                onClearDone={queue.clearDone}
-                onCancel={queue.cancelCurrent}
-                onSelect={handleSelectQueueItem}
-              />
+              {/* Right Side: Tabbed Layout Output (Preview vs JSON) */}
+              {hasCompletedOutput && (
+                <div className="space-y-4 animate-fade-up min-w-0">
+                  {error && (
+                    <div className="rounded-2xl border border-red-200 dark:border-red-950/30 bg-red-50/50 dark:bg-red-950/10 p-5">
+                      <p className="text-sm font-medium text-red-600 dark:text-red-400">Pipeline Execution Interrupted</p>
+                      <p className="mt-1 text-xs text-red-500/95 dark:text-red-400/80 leading-normal font-mono">{error}</p>
+                    </div>
+                  )}
 
-              {/* Real-time SSE Stream Progress */}
-              {(displayProgress.length > 0 || displayIsActive) && (
-                <ProgressFeed events={displayProgress} isActive={!!displayIsActive} />
+                  {result && <OutputTabs data={result} />}
+                </div>
               )}
             </div>
+          </section>
+        </div>
 
-            {/* Right Side: Tabbed Layout Output (Preview vs JSON) */}
-            {hasOutput && (
-              <div className="space-y-4 animate-fade-up min-w-0">
-                {error && (
-                  <div className="rounded-2xl border border-red-200 dark:border-red-950/30 bg-red-50/50 dark:bg-red-950/10 p-5">
-                    <p className="text-sm font-medium text-red-600 dark:text-red-400">Pipeline Execution Interrupted</p>
-                    <p className="mt-1 text-xs text-red-500/95 dark:text-red-400/80 leading-normal font-mono">{error}</p>
-                  </div>
-                )}
-
-                {result && <OutputTabs data={result} />}
-              </div>
-            )}
+        {/* Real-time Streaming Generation Modal Popup */}
+        {displayIsActive && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-lg animate-fade-up">
+              <ProgressFeed
+                events={displayProgress}
+                isActive={true}
+                onCancel={activeQueueItem?.status === "processing" ? queue.cancelCurrent : handleCancelDirect}
+              />
+            </div>
           </div>
-        </section>
+        )}
       </main>
 
       <Footer />
