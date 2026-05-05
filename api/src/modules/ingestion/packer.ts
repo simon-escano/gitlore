@@ -14,6 +14,12 @@ import {
 } from "./github";
 import type { RepoContext } from "./types";
 
+/**
+ * Maximum number of individual file content fetch requests allowed.
+ * Keeps outbound subrequests safely below Cloudflare's limit (50 on Free).
+ */
+const MAX_FILE_SUBREQUESTS = 12;
+
 function isIgnored(path: string): boolean {
   return IGNORED_PATHS.some((p) => path.includes(p));
 }
@@ -60,9 +66,12 @@ export async function ingestRepository(
     message: `File tree: ${tree.tree.length} total → ${blobs.length} after filtering`,
   });
 
-  // Tier 1: Priority files
+  // Tier 1: Priority files (excluding README, which we've already loaded)
   const priorityPaths = blobs
-    .filter((b) => PRIORITY_FILES.includes(getFileName(b.path)))
+    .filter((b) => {
+      const name = getFileName(b.path);
+      return PRIORITY_FILES.includes(name) && name.toLowerCase() !== "readme.md";
+    })
     .map((b) => b.path);
 
   // Tier 2: Entry points
@@ -83,15 +92,20 @@ export async function ingestRepository(
     })
     .map((b) => b.path);
 
-  // Pack files within budget
+  // Pack files within budget limits
   const budget = config.inference.maxContextChars;
   let packed = "";
   let packageInfo = "";
   let packedCount = 0;
 
-  const orderedPaths = [...priorityPaths, ...entryPaths, ...sourcePaths];
+  // Merge lists and strictly slice to subrequest budget
+  const allCandidatePaths = [...priorityPaths, ...entryPaths, ...sourcePaths];
+  const orderedPaths = allCandidatePaths.slice(0, MAX_FILE_SUBREQUESTS);
 
-  onProgress({ phase: "ingestion", message: `Packing files (budget: ${budget.toLocaleString()} chars)...` });
+  onProgress({ 
+    phase: "ingestion", 
+    message: `Packing files (budget: ${budget.toLocaleString()} chars, max files: ${MAX_FILE_SUBREQUESTS})...` 
+  });
 
   for (const filePath of orderedPaths) {
     if (packed.length >= budget) break;
@@ -113,7 +127,7 @@ export async function ingestRepository(
       onProgress({
         phase: "ingestion",
         message: `Reading ${filePath}`,
-        detail: `+${content.length} chars, ${pct}% budget used`,
+        detail: `[File ${packedCount}/${orderedPaths.length}] +${content.length} chars, ${pct}% budget used`,
       });
     }
   }
