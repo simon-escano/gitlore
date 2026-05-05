@@ -1,7 +1,7 @@
 import type { InferenceContext } from "../ingestion/types";
 
 const TS_INTERFACE = `interface Portfolio {
-  _thinking: string; // REQUIRED: Analyze the codebase and plan your architectural diagram and stack here BEFORE filling out the rest.
+  _thinking: string; // REQUIRED: Keep your architectural planning and code analysis extremely brief and concise (under 150 words total). Plan your diagram nodes and stack here BEFORE filling out the rest of the JSON.
   title: string; // A short, catchy title
   one_liner: string; // A single sentence summary
   contributions: string; // Synthesize the user's raw contribution notes into polished, professional role titles separated by commas. Example: "Database Architect, Frontend Lead, QA Engineer". Do NOT just copy the raw input — transform it.
@@ -40,7 +40,7 @@ The JSON MUST strictly satisfy this TypeScript interface:
 ${TS_INTERFACE}
 
 RULES (CRITICAL):
-1. THINK FIRST: You MUST write a multi-sentence architectural and system analysis in the \`_thinking\` field FIRST.
+1. THINK FIRST: You MUST write a brief, highly concise architectural planning and system analysis under 150 words total in the \`_thinking\` field FIRST. Keep this planning phase very short to preserve token space.
 2. STACK LIMIT: You MUST limit the \`tech_stack\` array to a maximum of 6 items. Select only the most important technologies.
 3. CONTRIBUTIONS: The user provides raw notes about what they did. You MUST synthesize these into polished, professional role titles in the \`contributions\` field. For example, if they write "made the database, helped with frontend, fixed bugs", you output "Database Architect, Frontend Developer, QA Engineer". Be concise and professional.
 4. PROBLEM STATEMENT: The \`problem\` field MUST describe a real-world, user-facing pain-point or deep technical constraint that the codebase is designed to tackle. NEVER use marketing slogans or simply write a positive description of what the project does. For example, instead of writing "Transforming GitHub repositories into structured case studies", write "Manually creating project profiles and documenting software architectures is too tedious to display on portfolios."

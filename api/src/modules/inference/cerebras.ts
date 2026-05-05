@@ -21,7 +21,7 @@ export async function analyzeWithCerebras(
     ],
     response_format: { type: "json_object" },
     temperature: config.inference.temperature,
-    max_completion_tokens: 2048,
+    max_completion_tokens: 8192,
     stream: true,
   };
 
