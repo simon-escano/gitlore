@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-bg: #fafafa;
+  --color-bg-secondary: #f4f4f5;
+  --color-bg-tertiary: #e4e4e7;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f9fafb;
+  --color-border: #e4e4e7;
+  --color-border-focus: #a1a1aa;
+  --color-text: #18181b;
+  --color-text-secondary: #71717a;
+  --color-text-muted: #a1a1aa;
+  --color-accent: #6d28d9;
+  --color-accent-hover: #7c3aed;
+  --color-accent-subtle: #ede9fe;
+  --color-success: #16a34a;
+  --color-success-subtle: #dcfce7;
+  --color-warning: #d97706;
+  --color-warning-subtle: #fef3c7;
+  --color-error: #dc2626;
+  --color-error-subtle: #fee2e2;
+  --color-ingestion: #2563eb;
+  --color-ingestion-subtle: #dbeafe;
+  --color-inference: #9333ea;
+  --color-inference-subtle: #f3e8ff;
+  --color-validation: #16a34a;
+  --color-validation-subtle: #dcfce7;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+/* Dark mode overrides */
+@layer base {
+  .dark {
+    --color-bg: #09090b;
+    --color-bg-secondary: #18181b;
+    --color-bg-tertiary: #27272a;
+    --color-surface: #18181b;
+    --color-surface-hover: #1f1f23;
+    --color-border: #27272a;
+    --color-border-focus: #52525b;
+    --color-text: #fafafa;
+    --color-text-secondary: #a1a1aa;
+    --color-text-muted: #71717a;
+    --color-accent: #8b5cf6;
+    --color-accent-hover: #a78bfa;
+    --color-accent-subtle: #1e1b4b;
+    --color-success-subtle: #052e16;
+    --color-warning-subtle: #451a03;
+    --color-error-subtle: #450a0a;
+    --color-ingestion-subtle: #172554;
+    --color-inference-subtle: #2e1065;
+    --color-validation-subtle: #052e16;
+  }
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    transition: background-color 0.2s, color 0.2s;
+  }
+}
+
+/* Scrollbar styling */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: var(--color-bg-tertiary);
+  }
+}
