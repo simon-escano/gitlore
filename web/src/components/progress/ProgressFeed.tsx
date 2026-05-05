@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Package, Brain, CheckCircle, Loader2 } from "lucide-react";
+import { Package, Brain, CheckCircle, Loader2, type LucideIcon } from "lucide-react";
 import type { ProgressEvent } from "../../types/gitlore";
 
 interface Props {
@@ -8,27 +8,31 @@ interface Props {
   onCancel?: () => void;
 }
 
-const phaseConfig = {
+interface PhaseConfigItem {
+  icon: LucideIcon;
+  label: string;
+  color: string;
+  bg: string;
+}
+
+const phaseConfig: Record<string, PhaseConfigItem> = {
   ingestion: {
     icon: Package,
-    label: "Ingestion",
+    label: "Ingestion Stage",
     color: "text-(--color-ingestion)",
     bg: "bg-(--color-ingestion-subtle)",
-    dot: "bg-(--color-ingestion)",
   },
   inference: {
     icon: Brain,
-    label: "Inference",
+    label: "Inference Stage",
     color: "text-(--color-inference)",
     bg: "bg-(--color-inference-subtle)",
-    dot: "bg-(--color-inference)",
   },
   validation: {
     icon: CheckCircle,
-    label: "Validation",
+    label: "Validation Stage",
     color: "text-(--color-validation)",
     bg: "bg-(--color-validation-subtle)",
-    dot: "bg-(--color-validation)",
   },
 };
 
@@ -41,8 +45,12 @@ export function ProgressFeed({ events, isActive, onCancel }: Props) {
 
   if (events.length === 0 && !isActive) return null;
 
+  const currentPhase = events[events.length - 1]?.phase || "ingestion";
+  const phases = ["ingestion", "inference", "validation"];
+
   return (
-    <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) overflow-hidden shadow-sm">
+    <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) overflow-hidden shadow-lg animate-fade-up">
+      {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-(--color-border) px-5 py-4">
         {isActive && <Loader2 className="h-4 w-4 animate-spin text-(--color-accent) shrink-0" />}
         <h3 className="text-sm font-medium text-(--color-text) flex-1">
@@ -58,38 +66,64 @@ export function ProgressFeed({ events, isActive, onCancel }: Props) {
           </button>
         )}
       </div>
-      <div className="max-h-72 overflow-y-auto p-3">
-        <ul className="space-y-1">
-          {events.map((event, i) => {
-            const cfg = phaseConfig[event.phase];
-            const Icon = cfg.icon;
-            const isLast = i === events.length - 1;
 
-            return (
-              <li
-                key={i}
-                className={`flex items-start gap-2.5 rounded-xl px-3 py-2 transition-colors ${
-                  isLast && isActive ? cfg.bg : "hover:bg-(--color-bg-secondary)"
-                }`}
-              >
-                <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${cfg.color}`} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-(--color-text) font-normal">
-                    {event.message}
-                  </p>
-                  {event.detail && (
-                    <p className="mt-0.5 text-xs text-(--color-text-muted) font-mono leading-normal">
-                      {event.detail}
-                    </p>
-                  )}
-                </div>
-                <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${cfg.color} ${cfg.bg}`}>
+      {/* Grouped Logs Body */}
+      <div className="max-h-[380px] overflow-y-auto p-4 space-y-4">
+        {phases.map((phaseKey) => {
+          const phaseEvents = events.filter((e) => e.phase === phaseKey);
+          const isPhaseActive = isActive && currentPhase === phaseKey;
+          
+          // Only show a container if there are events in it, or if it is currently active
+          if (phaseEvents.length === 0 && !isPhaseActive) return null;
+          
+          const cfg = phaseConfig[phaseKey];
+          const Icon = cfg.icon;
+
+          return (
+            <div
+              key={phaseKey}
+              className={`rounded-xl border border-(--color-border)/60 bg-zinc-50/40 dark:bg-zinc-900/10 overflow-hidden transition-all duration-300 ${
+                isPhaseActive ? "ring-1 ring-(--color-accent)/30 border-(--color-accent)/30" : ""
+              }`}
+            >
+              {/* Phase Header */}
+              <div className="flex items-center gap-2.5 border-b border-(--color-border)/40 px-4 py-2.5 bg-zinc-50/90 dark:bg-zinc-900/30">
+                <Icon className={`h-4 w-4 ${cfg.color}`} />
+                <span className="text-xs font-semibold text-(--color-text) tracking-wide uppercase">
                   {cfg.label}
                 </span>
-              </li>
-            );
-          })}
-        </ul>
+                {isPhaseActive && (
+                  <Loader2 className="ml-auto h-3 w-3 animate-spin text-(--color-accent)" />
+                )}
+              </div>
+
+              {/* Phase Log Lines */}
+              <div className="p-3.5 space-y-2.5">
+                {phaseEvents.map((event, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-xs">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-600" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-(--color-text) font-normal leading-normal">
+                        {event.message}
+                      </p>
+                      {event.detail && (
+                        <p className="mt-1 text-[10px] text-(--color-text-muted) font-mono leading-normal pl-2.5 border-l border-(--color-border)">
+                          {event.detail}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                
+                {phaseEvents.length === 0 && isPhaseActive && (
+                  <div className="flex items-center gap-2 text-xs text-(--color-text-muted) italic animate-pulse">
+                    <span>Awaiting task execution...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
     </div>

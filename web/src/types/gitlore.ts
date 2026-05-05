@@ -32,9 +32,9 @@ export interface GitloreOutput {
   one_liner: string;
   contributions: string;
   links: LinkItem[];
-  gallery: string[];
   problem: string;
   goal: string;
+  gallery: string[];
   key_features: Feature[];
   architecture_diagram_code: string;
   tech_stack: StackItem[];

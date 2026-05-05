@@ -8,9 +8,9 @@ const TS_INTERFACE = `interface Portfolio {
   links: [
     { icon: "github"; label: string; url: string }
   ]; // MUST include at least one link
-  gallery: string[]; // List of mock gallery screenshots or visual nodes, keep empty default [] if none.
   problem: string; // The problem being solved
   goal: string; // The goal of the project
+  gallery: string[]; // List of mock gallery screenshots or visual nodes, keep empty default [] if none.
   key_features: [
     { icon: string; text: string },
     { icon: string; text: string },

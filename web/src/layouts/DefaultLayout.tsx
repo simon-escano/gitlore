@@ -7,6 +7,7 @@ import type { GitloreOutput } from "../types/gitlore";
 
 interface Props {
   data: GitloreOutput;
+  onChange?: (updated: GitloreOutput) => void;
 }
 
 const iconMap: Record<string, LucideIcon> = {
@@ -191,8 +192,62 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function DefaultLayout({ data }: Props) {
-  // Group stack by role
+export function DefaultLayout({ data, onChange }: Props) {
+  const [editedDiagramCode, setEditedDiagramCode] = useState(data.architecture_diagram_code);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+
+  // Sync edits from other sources (like the JSON editor)
+  useEffect(() => {
+    setEditedDiagramCode(data.architecture_diagram_code);
+  }, [data.architecture_diagram_code]);
+
+  // Diagram dragging / pan logic
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStart.current.x,
+      y: e.clientY - dragStart.current.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const zoomFactor = 0.08;
+    const direction = e.deltaY < 0 ? 1 : -1;
+    const newScale = Math.min(Math.max(scale + direction * zoomFactor, 0.4), 3);
+    setScale(newScale);
+  };
+
+  const zoomIn = () => setScale((prev) => Math.min(prev + 0.15, 3));
+  const zoomOut = () => setScale((prev) => Math.max(prev - 0.15, 0.4));
+  const resetView = () => {
+    setPan({ x: 0, y: 0 });
+    setScale(1);
+  };
+
+  // Sync edited code back up to parent
+  const handleDiagramCodeChange = (newCode: string) => {
+    setEditedDiagramCode(newCode);
+    if (onChange) {
+      onChange({
+        ...data,
+        architecture_diagram_code: newCode,
+      });
+    }
+  };
+
+  // Group tech_stack by role
   const stackGroups = (data.tech_stack || []).reduce<Record<string, typeof data.tech_stack>>((acc, item) => {
     const role = item.role || "Supporting";
     if (!acc[role]) acc[role] = [];
@@ -207,9 +262,9 @@ export function DefaultLayout({ data }: Props) {
     <div className="space-y-6 animate-fade-up">
       {/* Header Case Study Identity */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 shrink-0">
               Case Study
             </span>
             <h2 className="text-3xl font-light tracking-tight text-(--color-text) sm:text-4xl">
@@ -217,9 +272,9 @@ export function DefaultLayout({ data }: Props) {
             </h2>
           </div>
 
-          {/* Link Buttons Beside Title as Premium Icon Buttons */}
+          {/* Link Buttons beside the title directly */}
           {data.links && data.links.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 pt-1.5 sm:pt-0 shrink-0">
               {data.links.map((link, i) => {
                 const Icon = getIcon(link.icon);
                 return (
@@ -229,9 +284,9 @@ export function DefaultLayout({ data }: Props) {
                     target="_blank"
                     rel="noopener noreferrer"
                     title={link.label}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border) bg-(--color-surface) text-zinc-400 hover:text-(--color-accent) hover:border-zinc-300 dark:hover:border-zinc-800 transition-all hover:scale-105 shadow-sm"
+                    className="flex h-7.5 w-7.5 items-center justify-center rounded-lg border border-(--color-border) bg-(--color-surface) text-zinc-400 hover:text-(--color-accent) hover:border-zinc-300 dark:hover:border-zinc-800 transition-all hover:scale-105 shadow-sm"
                   >
-                    <Icon className="h-4.5 w-4.5" />
+                    <Icon className="h-3.5 w-3.5" />
                   </a>
                 );
               })}
@@ -244,7 +299,7 @@ export function DefaultLayout({ data }: Props) {
         </p>
         
         {data.contributions && (
-          <div className="pt-2 flex flex-wrap items-center gap-2">
+          <div className="pt-1 flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-(--color-text-secondary)">Roles:</span>
             {data.contributions.split(",").map((role, idx) => (
               <span
@@ -293,7 +348,33 @@ export function DefaultLayout({ data }: Props) {
           </div>
         )}
 
-        {/* Section 2: Key Features Row (Displays directly BEFORE architecture diagram) */}
+        {/* Section 2: Visual Gallery (Appears AFTER problem and goal) */}
+        {data.gallery && data.gallery.length > 0 && (
+          <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm">
+            <SectionLabel>Visual Gallery</SectionLabel>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+              {data.gallery.map((img, i) => (
+                <div key={i} className="relative aspect-video rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-(--color-border) overflow-hidden group/gal">
+                  <img
+                    src={img}
+                    alt={`Gallery item ${i + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover/gal:scale-105"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.parentElement?.classList.add("flex", "items-center", "justify-center", "bg-gradient-to-tr", "from-indigo-500/[0.04]", "to-violet-500/[0.04]");
+                      const label = document.createElement("span");
+                      label.className = "text-[11px] font-mono text-zinc-400 dark:text-zinc-500";
+                      label.innerText = `[Mock View ${i + 1}]`;
+                      e.currentTarget.parentElement?.appendChild(label);
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section 3: Key Features Row */}
         {data.key_features && data.key_features.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
             {data.key_features.map((f, i) => {
@@ -313,21 +394,81 @@ export function DefaultLayout({ data }: Props) {
           </div>
         )}
 
-        {/* Section 3: Architecture Diagram (2/3 width) and Tech Stack (1/3 width) beside each other */}
+        {/* Section 4: Architecture Diagram (2/3 width) and Tech Stack (1/3 width) beside each other */}
         <div className="grid gap-4 md:grid-cols-3">
           
           {/* System Architecture Diagram Card (Spans 2 columns on desktop) */}
-          {data.architecture_diagram_code && (
-            <div className="md:col-span-2 rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm">
-              <div className="flex items-center justify-between">
-                <SectionLabel>System Architecture</SectionLabel>
-                <CopyButton text={data.architecture_diagram_code} label="Mermaid Code" />
+          <div className="md:col-span-2 rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm">
+            <SectionLabel>System Architecture</SectionLabel>
+            
+            {/* Diagram View (Top Part) - Draggable/Zoomable Canvas with background mesh */}
+            <div
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+              className="relative overflow-hidden border border-(--color-border)/60 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/10 h-[340px] select-none cursor-grab active:cursor-grabbing group/canvas shadow-inner"
+            >
+              {/* Dot blueprint mesh background */}
+              <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none" />
+
+              {/* Floating controls toolbar */}
+              <div className="absolute top-3.5 right-3.5 z-10 flex items-center gap-1.5 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg border border-(--color-border) p-1 shadow-sm opacity-60 group-hover/canvas:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={zoomIn}
+                  className="h-6 w-6 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded text-sm font-semibold text-zinc-600 dark:text-zinc-400"
+                  title="Zoom In"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  onClick={zoomOut}
+                  className="h-6 w-6 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded text-sm font-semibold text-zinc-600 dark:text-zinc-400"
+                  title="Zoom Out"
+                >
+                  -
+                </button>
+                <button
+                  type="button"
+                  onClick={resetView}
+                  className="px-2 h-6 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded text-[11px] font-medium text-zinc-600 dark:text-zinc-400"
+                  title="Reset Workspace"
+                >
+                  Reset
+                </button>
               </div>
-              <div className="rounded-xl bg-zinc-50/50 dark:bg-zinc-900/30 border border-zinc-100 dark:border-zinc-900/40 p-4">
-                <MermaidDiagram code={data.architecture_diagram_code} />
+
+              {/* Interactive Canvas container */}
+              <div
+                style={{
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                  transformOrigin: "center center",
+                }}
+                className="w-full h-full flex items-center justify-center transition-transform duration-75"
+              >
+                <MermaidDiagram code={editedDiagramCode} />
               </div>
             </div>
-          )}
+
+            {/* Code View (Bottom Part) - Simultaneously shown and editable */}
+            <div className="space-y-2.5 pt-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">
+                  Diagram Source Code
+                </span>
+                <CopyButton text={editedDiagramCode} label="Copy Syntax" />
+              </div>
+              <textarea
+                value={editedDiagramCode}
+                onChange={(e) => handleDiagramCodeChange(e.target.value)}
+                className="w-full h-36 font-mono text-[11px] leading-relaxed p-4 bg-zinc-950 text-zinc-100 rounded-xl border border-(--color-border) focus:outline-none focus:ring-1 focus:ring-(--color-accent)/40 resize-y shadow-inner"
+                spellCheck={false}
+              />
+            </div>
+          </div>
 
           {/* Tech Stack Card (Spans 1 column on desktop) */}
           {data.tech_stack && data.tech_stack.length > 0 && (
@@ -369,7 +510,7 @@ export function DefaultLayout({ data }: Props) {
           )}
         </div>
 
-        {/* Section 4: Performance Metrics (Maintained last at the very bottom as a 3-column row) */}
+        {/* Section 5: Performance Metrics (Maintained last at the very bottom as a 3-column row) */}
         {data.results && (
           <div className="grid gap-4 sm:grid-cols-3">
             {(["performance", "scale", "utility"] as const).map((key) => {

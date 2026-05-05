@@ -165,7 +165,7 @@ export default function App() {
                     </div>
                   )}
 
-                  {result && <OutputTabs data={result} />}
+                  {result && <OutputTabs data={result} onChange={setResult} />}
                 </div>
               )}
             </div>
