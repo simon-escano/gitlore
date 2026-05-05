@@ -16,7 +16,7 @@ export interface RepoContext {
 
 export interface InferenceContext extends RepoContext {
   title: string;
-  role: string;
+  contributions: string;
   context?: string;
   gallery: string[];
 }

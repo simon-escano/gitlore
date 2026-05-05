@@ -4,7 +4,7 @@ const TS_INTERFACE = `interface Portfolio {
   _thinking: string; // REQUIRED: Analyze the codebase and plan your architectural diagram and stack here BEFORE filling out the rest.
   title: string; // A short, catchy title
   one_liner: string; // A single sentence summary
-  contributions: string; // The role and contributions
+  contributions: string; // Synthesize the user's raw contribution notes into polished, professional role titles separated by commas. Example: "Database Architect, Frontend Lead, QA Engineer". Do NOT just copy the raw input — transform it.
   problem: string; // The problem being solved
   goal: string; // The goal of the project
   results: {
@@ -41,11 +41,12 @@ ${TS_INTERFACE}
 RULES (CRITICAL):
 1. THINK FIRST: You MUST write a multi-sentence architectural and system analysis in the \`_thinking\` field FIRST.
 2. STACK LIMIT: You MUST limit the \`stack\` array to a maximum of 6 items. Select only the most important technologies.
-3. ROLE-BASED ARCHITECTURE: The \`architecture_diagram_code\` MUST focus primarily on the components where the user made contributions (based on their "Role" and "Context"). If the user was not involved in a specific area (e.g., AI or Devops), do not emphasize it in the diagram. Focus on the structures they managed (e.g., Database schema, Frontend flow, API integration).
-4. DYNAMIC DIAGRAM: \`architecture_diagram_code\` MUST be a dynamic, non-linear Mermaid.js graph TD diagram. Use branching and parallel paths (e.g., A --> B and A --> C) to show how data flows between different systems. LIMIT the diagram to 10 nodes MAX. Focus on the most important clusters (e.g., UI, DB, Integration). CRITICAL SYNTAX RULE: Use simple alphanumeric node IDs (A, B, C) and attach bracketed labels. NEVER use spaces in node IDs. NEVER use \`-->|Text|>\`.
-5. NO HALLUCINATION: If specific quantitative data is NOT present, describe qualitative architectural benefits instead. Do NOT invent fake numbers.
-6. NO PLACEHOLDERS: Use the exact Repository URL provided.
-7. Write as if presenting to a hiring manager at a top-tier tech company.`;
+3. CONTRIBUTIONS: The user provides raw notes about what they did. You MUST synthesize these into polished, professional role titles in the \`contributions\` field. For example, if they write "made the database, helped with frontend, fixed bugs", you output "Database Architect, Frontend Developer, QA Engineer". Be concise and professional.
+4. ROLE-BASED ARCHITECTURE: The \`architecture_diagram_code\` MUST focus primarily on the components where the user made contributions (based on their contributions and context). If the user was not involved in a specific area (e.g., AI or Devops), do not emphasize it in the diagram. Focus on the structures they managed (e.g., Database schema, Frontend flow, API integration).
+5. DYNAMIC DIAGRAM: \`architecture_diagram_code\` MUST be a dynamic, non-linear Mermaid.js graph TD diagram. Use branching and parallel paths (e.g., A --> B and A --> C) to show how data flows between different systems. LIMIT the diagram to 10 nodes MAX. CRITICAL SYNTAX RULES: Use simple alphanumeric node IDs (A, B, C) and attach labels with square brackets like A["My Label"]. ALWAYS quote labels containing special characters with double quotes inside square brackets. NEVER use bare parentheses in labels. NEVER use spaces in node IDs.
+6. NO HALLUCINATION: If specific quantitative data is NOT present, describe qualitative architectural benefits instead. Do NOT invent fake numbers.
+7. NO PLACEHOLDERS: Use the exact Repository URL provided.
+8. Write as if presenting to a hiring manager at a top-tier tech company.`;
 }
 
 export function buildUserPrompt(context: InferenceContext): string {
@@ -53,7 +54,7 @@ export function buildUserPrompt(context: InferenceContext): string {
 
   return `## Target Output Identity
 Title: ${context.title}
-My Role / Contributions: ${context.role}
+My Contributions: ${context.contributions}
 Repository URL: https://github.com/${context.owner}/${context.repo}
 Additional Context: ${context.context ?? "None provided"}
 

@@ -28,7 +28,7 @@ async function runPipeline(
     );
   }
 
-  const { url, title, role, context, gallery } = parsed.data;
+  const { url, title, contributions, context, gallery } = parsed.data;
 
   const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!match) {
@@ -45,7 +45,7 @@ async function runPipeline(
   onProgress({ phase: "ingestion", message: `Starting ingestion for ${owner}/${repo}` });
   const repoContext = await ingestRepository(owner, repo, config, onProgress);
 
-  const inferenceContext = { ...repoContext, title, role, context, gallery };
+  const inferenceContext = { ...repoContext, title, contributions, context, gallery };
 
   // Step 2: Inference
   onProgress({ phase: "inference", message: "Sending to Cerebras Cloud..." });
