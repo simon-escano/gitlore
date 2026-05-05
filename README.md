@@ -1,51 +1,58 @@
 # ⚡ Gitlore
-**Portfolio Intelligence API — Deployed on Cloudflare Workers. Powered by Cerebras Cloud.**
 
-Gitlore transforms any GitHub repository into a structured, high-impact technical case study. It runs on **Cloudflare Workers** (free tier) with **Cerebras Wafer-Scale inference**, generating production-grade architectural analysis in seconds at zero cost.
+**Portfolio Intelligence Platform — React GUI + API on Cloudflare's Edge.**
+
+Gitlore transforms any GitHub repository into a structured, high-impact technical case study. The API runs on **Cloudflare Workers** and the frontend on **Cloudflare Pages** — both on the free tier at zero cost.
 
 > [!NOTE]
-> Gitlore is completely free to run. Cloudflare Workers free tier provides 100,000 requests/day, and Cerebras Cloud provides free LLM inference. No credit card required.
+> Gitlore is completely free to run. Cloudflare Workers (100K req/day), Cloudflare Pages (unlimited sites), and Cerebras Cloud (free inference) — no credit card required.
 
 ## 🏗️ Architecture
 
 ```mermaid
 graph LR
-    A["Client"] --> B["Cloudflare Worker"]
-    B --> C["GitHub REST API"]
-    B --> D["Cerebras Cloud"]
-    C --> B
-    D --> B
-    B --> A
+    A["Browser (React SPA)"] --> B["Cloudflare Pages"]
+    B --> C["Cloudflare Worker (API)"]
+    C --> D["GitHub REST API"]
+    C --> E["Cerebras Cloud"]
 ```
 
-| Layer | Technology | Role |
-|-------|-----------|------|
-| **Edge Runtime** | [Cloudflare Workers](https://workers.cloudflare.com) | Request handling, orchestration |
-| **Framework** | [Hono](https://hono.dev) | Lightweight HTTP routing |
-| **Inference** | [Cerebras Cloud](https://cloud.cerebras.ai) (Llama 3.1-8B) | Structured portfolio generation |
-| **Data Source** | [GitHub REST API](https://docs.github.com/en/rest) | Repository ingestion |
-| **Validation** | [Zod](https://zod.dev) | Strict JSON schema enforcement |
-| **Visuals** | [Mermaid.js](https://mermaid.js.org) | Dynamic architecture diagrams |
-
-### Request Pipeline
+This is a **pnpm monorepo** with two packages:
 
 ```
-POST /api/generate
-  ① Ingestion  → Fetch repo metadata, README, file tree, source files from GitHub
-  ② Inference  → Stream context to Cerebras Cloud, receive structured JSON
-  ③ Validation → Zod schema parse + Mermaid syntax check
-  → JSON Response
+gitlore/
+├── api/                    # Cloudflare Worker — Hono REST API
+│   ├── src/
+│   │   ├── index.ts        # Hono app with CORS
+│   │   ├── routes/         # /api/generate + /api/generate/stream (SSE)
+│   │   ├── modules/        # ingestion, inference, validation
+│   │   ├── schemas/        # Zod request/response schemas
+│   │   └── lib/            # config, errors, constants, progress
+│   ├── wrangler.toml
+│   └── package.json
+├── web/                    # Cloudflare Pages — React + Tailwind v4
+│   ├── src/
+│   │   ├── App.tsx         # Main app shell
+│   │   ├── components/     # Input, Progress, Output components
+│   │   ├── layouts/        # Customizable portfolio layout
+│   │   ├── lib/            # SSE client, theme, queue state
+│   │   └── types/          # Frontend type definitions
+│   ├── wrangler.toml
+│   └── package.json
+├── package.json            # Workspace root
+└── pnpm-workspace.yaml
 ```
 
-## 🚀 Performance
-Results from sequential stress tests (Cerebras Llama 3.1-8B):
+## 🖥️ Frontend Features
 
-| Metric | Result |
-|--------|--------|
-| **Average Latency** | **8.68s** |
-| **Fastest Run** | **7.86s** |
-| **Throughput** | ~1,200 tokens/sec |
-| **Reliability** | 100% (5/5 successful runs) |
+| Feature | Description |
+|---------|-------------|
+| **Real-time Progress** | SSE streaming shows live ingestion/inference/validation events with Lucide icons |
+| **Bulk Queue** | Queue multiple repos for sequential processing |
+| **JSON View** | Syntax-highlighted output with copy-to-clipboard |
+| **Preview View** | Rich portfolio card with Mermaid diagrams rendered as SVG |
+| **Customizable Layout** | Edit `web/src/layouts/DefaultLayout.tsx` to change the output UI |
+| **Theme System** | Dark / Light / System with smooth transitions |
 
 ## 📦 Setup
 
@@ -62,72 +69,81 @@ cd gitlore
 pnpm install
 ```
 
-### 2. Configure Secrets
+### 2. Configure API Secrets
 ```bash
-# Log in to Cloudflare
+cd api
 npx wrangler login
-
-# Set your Cerebras API key (required)
 npx wrangler secret put CEREBRAS_API_KEY
-
-# Set a GitHub PAT for higher rate limits (optional, but recommended)
-npx wrangler secret put GITHUB_PAT
+# Optional: npx wrangler secret put GITHUB_PAT
 ```
 
 ### 3. Local Development
 ```bash
-pnpm dev
-# → Starts local Workers dev server at http://localhost:8787
+# From the repo root:
+pnpm dev          # Starts both API (8787) and Web (5173) in parallel
+pnpm dev:api      # API only
+pnpm dev:web      # Web only
 ```
 
-Create a `.dev.vars` file for local development secrets:
+Create `api/.dev.vars` for local API secrets:
 ```env
 CEREBRAS_API_KEY=your_key_here
 GITHUB_PAT=your_github_pat_here
 ```
 
-### 4. Deploy to Cloudflare
-```bash
-pnpm run deploy
-# → Deploys to https://gitlore.<your-subdomain>.workers.dev
+For the frontend, create `web/.env` if you need a custom API URL:
+```env
+VITE_API_URL=http://localhost:8787
 ```
 
-## 🎮 Usage
-
+### 4. Deploy
 ```bash
-curl -X POST https://gitlore.<your-subdomain>.workers.dev/api/generate \
+pnpm deploy       # Deploys both API and Web to Cloudflare
+pnpm deploy:api   # API only
+pnpm deploy:web   # Web only
+```
+
+## 🎮 API Usage
+
+The API has two endpoints:
+
+### Standard (JSON response)
+```bash
+curl -X POST https://api.gitlore.workers.dev/api/generate \
   -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://github.com/simon-escano/gitlore",
-    "title": "Gitlore - Portfolio Intelligence API",
-    "role": "Lead Architect",
-    "context": "Demonstrating high-performance LLM orchestration on the edge."
-  }'
+  -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "role": "Lead Dev" }'
 ```
 
-### Response Features
-Returns a structured JSON payload ready for your portfolio site:
-- **`_thinking`**: Chain-of-thought architectural analysis.
-- **`architecture_diagram_code`**: File-level Mermaid.js system map.
-- **`results`**: Qualitative and quantitative impact metrics.
-- **`stack`**: Automatic tech stack discovery with roles.
-- **`key_features`**: High-impact feature highlights with Lucide icons.
+### Streaming (SSE with progress events)
+```bash
+curl -N -X POST https://api.gitlore.workers.dev/api/generate/stream \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "role": "Lead Dev" }'
+```
+
+## 🎨 Customizing the Portfolio Layout
+
+Edit `web/src/layouts/DefaultLayout.tsx` — this single file controls how portfolio output is rendered in the Preview tab. The component receives the full `GitloreOutput` as props.
 
 ## 📊 Scripts
+
 | Script | Description |
 |--------|-------------|
-| `pnpm dev` | Start local Workers dev server |
-| `pnpm run deploy` | Deploy to Cloudflare Workers |
-| `pnpm run typecheck` | Run TypeScript type checking |
+| `pnpm dev` | Start both API + Web dev servers |
+| `pnpm dev:api` | Start API dev server (port 8787) |
+| `pnpm dev:web` | Start Web dev server (port 5173) |
+| `pnpm deploy` | Deploy both to Cloudflare |
+| `pnpm typecheck` | TypeScript check both packages |
 
 ## 💰 Cost Breakdown
 
-| Service | Tier | Limit | Cost |
-|---------|------|-------|------|
-| Cloudflare Workers | Free | 100,000 req/day | **$0** |
-| Cerebras Cloud | Free | Rate-limited | **$0** |
-| GitHub REST API | Free (with PAT) | 5,000 req/hr | **$0** |
-| **Total** | | | **$0/month** |
+| Service | Tier | Cost |
+|---------|------|------|
+| Cloudflare Workers | Free (100K req/day) | **$0** |
+| Cloudflare Pages | Free (unlimited sites) | **$0** |
+| Cerebras Cloud | Free (rate-limited) | **$0** |
+| GitHub REST API | Free (5K req/hr with PAT) | **$0** |
+| **Total** | | **$0/month** |
 
 ## 🛡️ License
 MIT
