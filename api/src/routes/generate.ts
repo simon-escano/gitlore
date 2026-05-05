@@ -112,14 +112,22 @@ generateRoute.post("/generate/stream", async (c) => {
         id: String(++eventId),
       });
     } catch (err) {
-      const message = err instanceof GitloreError
-        ? err.message
-        : "An unexpected error occurred";
+      // Console log on server with stack trace for detailed tracking
+      console.error("[Pipeline Streaming Error]", err);
+
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
       const code = err instanceof GitloreError ? err.code : "INTERNAL_ERROR";
+      const details = err instanceof GitloreError ? err.details : (err instanceof Error ? err.stack : undefined);
 
       await stream.writeSSE({
         event: "error",
-        data: JSON.stringify({ error: { code, message } }),
+        data: JSON.stringify({
+          error: {
+            code,
+            message,
+            ...(details ? { details } : {}),
+          },
+        }),
         id: String(++eventId),
       });
     }

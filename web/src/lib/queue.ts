@@ -73,8 +73,8 @@ export function useQueue() {
             // Auto-process next
             queueMicrotask(() => processNext());
           },
-          onError: (error: string) => {
-            updateItem(next.id, { status: "error", error });
+          onError: (error: string, details?: string) => {
+            updateItem(next.id, { status: "error", error, errorDetails: details });
             processingRef.current = false;
             controllerRef.current = null;
             queueMicrotask(() => processNext());

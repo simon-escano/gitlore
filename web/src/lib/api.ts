@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? "https://api.gitlore.workers.dev
 interface StreamCallbacks {
   onProgress: (event: ProgressEvent) => void;
   onResult: (data: GitloreOutput) => void;
-  onError: (error: string) => void;
+  onError: (error: string, details?: string) => void;
 }
 
 /**
@@ -29,11 +29,21 @@ export function streamGenerate(
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: { message: `HTTP ${res.status}` } }));
-        callbacks.onError(body.error?.message ?? `Request failed with status ${res.status}`);
+        const msg = body.error?.message ?? `Request failed with status ${res.status}`;
+        
+        // Extract details (object or string) and stringify elegantly if object
+        const detailsObj = body.error?.details;
+        const details = detailsObj 
+          ? (typeof detailsObj === "object" ? JSON.stringify(detailsObj, null, 2) : String(detailsObj)) 
+          : undefined;
+
+        console.error("[API Error HTTP Response]", { status: res.status, message: msg, details });
+        callbacks.onError(msg, details);
         return;
       }
 
       if (!res.body) {
+        console.error("[API Error]", "No response body received");
         callbacks.onError("No response body received");
         return;
       }
@@ -63,10 +73,17 @@ export function streamGenerate(
               } else if (currentEvent === "result") {
                 callbacks.onResult(parsed.data as GitloreOutput);
               } else if (currentEvent === "error") {
-                callbacks.onError(parsed.error?.message ?? "Unknown error");
+                const msg = parsed.error?.message ?? "Unknown error";
+                const detailsObj = parsed.error?.details;
+                const details = detailsObj 
+                  ? (typeof detailsObj === "object" ? JSON.stringify(detailsObj, null, 2) : String(detailsObj)) 
+                  : undefined;
+
+                console.error("[SSE Error Event Received]", { message: msg, details });
+                callbacks.onError(msg, details);
               }
-            } catch {
-              // Skip malformed events
+            } catch (jsonErr) {
+              console.warn("[SSE JSON Parse Warning]", jsonErr, data);
             }
             currentEvent = "";
           }
@@ -74,7 +91,9 @@ export function streamGenerate(
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
-        callbacks.onError((err as Error).message ?? "Network error");
+        const errObj = err as Error;
+        console.error("[Network/Runtime Stream Error]", errObj);
+        callbacks.onError(errObj.message ?? "Network error", errObj.stack);
       }
     }
   })();

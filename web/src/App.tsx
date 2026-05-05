@@ -18,11 +18,15 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<GitloreOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
 
   const handleSubmit = (req: GenerateRequest) => {
     setProgress([]);
     setResult(null);
     setError(null);
+    setErrorDetails(null);
+    setShowErrorDetails(false);
     setIsGenerating(true);
 
     // Smooth scroll down to workspace
@@ -35,8 +39,10 @@ export default function App() {
         setIsGenerating(false);
         abortControllerRef.current = null;
       },
-      onError: (msg) => {
+      onError: (msg, details) => {
         setError(msg);
+        setErrorDetails(details || null);
+        setShowErrorDetails(false);
         setIsGenerating(false);
         abortControllerRef.current = null;
       },
@@ -64,9 +70,13 @@ export default function App() {
       setResult(item.result);
       setProgress(item.progress);
       setError(null);
+      setErrorDetails(null);
+      setShowErrorDetails(false);
       setIsGenerating(false);
     } else if (item.error) {
       setError(item.error);
+      setErrorDetails(item.errorDetails || null);
+      setShowErrorDetails(false);
       setProgress(item.progress);
       setResult(null);
       setIsGenerating(false);
@@ -159,9 +169,29 @@ export default function App() {
               {hasCompletedOutput && (
                 <div className="space-y-4 animate-fade-up min-w-0">
                   {error && (
-                    <div className="rounded-2xl border border-red-200 dark:border-red-950/30 bg-red-50/50 dark:bg-red-950/10 p-5">
-                      <p className="text-sm font-medium text-red-600 dark:text-red-400">Pipeline Execution Interrupted</p>
-                      <p className="mt-1 text-xs text-red-500/95 dark:text-red-400/80 leading-normal font-mono">{error}</p>
+                    <div className="rounded-2xl border border-red-200 dark:border-red-900/10 bg-red-50/30 dark:bg-red-950/5 p-5 space-y-3 animate-fade-in">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-red-600 dark:text-red-400">Pipeline Execution Interrupted</p>
+                          <p className="mt-1 text-xs text-red-500/90 dark:text-red-400/80 leading-relaxed font-mono">{error}</p>
+                        </div>
+                        
+                        {errorDetails && (
+                          <button
+                            type="button"
+                            onClick={() => setShowErrorDetails(!showErrorDetails)}
+                            className="text-xs font-semibold text-red-600/80 hover:text-red-600 dark:text-red-400/80 dark:hover:text-red-400 hover:underline shrink-0 pt-0.5"
+                          >
+                            {showErrorDetails ? "Hide details" : "See more details"}
+                          </button>
+                        )}
+                      </div>
+
+                      {errorDetails && showErrorDetails && (
+                        <pre className="text-[10px] leading-relaxed font-mono p-4 bg-red-950/[0.04] dark:bg-red-950/20 rounded-xl border border-red-200/50 dark:border-red-900/10 text-red-700 dark:text-red-400 overflow-auto max-h-64 whitespace-pre-wrap break-all shadow-inner animate-fade-up">
+                          {errorDetails}
+                        </pre>
+                      )}
                     </div>
                   )}
 

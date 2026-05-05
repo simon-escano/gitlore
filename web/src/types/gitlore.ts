@@ -65,4 +65,5 @@ export interface QueueItem {
   progress: ProgressEvent[];
   result?: GitloreOutput;
   error?: string;
+  errorDetails?: string;
 }
