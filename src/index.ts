@@ -1,21 +1,24 @@
 import { Hono } from "hono";
-import { serve } from "@hono/node-server";
 import { generateRoute } from "./routes/generate";
 import { GitloreError } from "./lib/errors";
-import { config } from "./lib/config";
+import type { Bindings } from "./lib/config";
 
-const app = new Hono();
+type Env = { Bindings: Bindings };
+
+const app = new Hono<Env>();
 
 // Health check / info endpoint
-app.get("/", (c) =>
-  c.json({
+app.get("/", (c) => {
+  const model = c.env.CEREBRAS_MODEL ?? "llama3.1-8b";
+  return c.json({
     name: "gitlore",
     version: "1.0.0",
     status: "running",
-    model: config.cerebras.model,
+    model,
     provider: "cerebras",
-  })
-);
+    runtime: "cloudflare-workers",
+  });
+});
 
 // Mount API routes
 app.route("/api", generateRoute);
@@ -48,11 +51,4 @@ app.onError((err, c) => {
   );
 });
 
-// Start server
-console.log(`⚡ Gitlore running on http://localhost:${config.server.port}`);
-console.log(`🧠 Model: ${config.cerebras.model} @ Cerebras Cloud`);
-
-serve({
-  fetch: app.fetch,
-  port: config.server.port,
-});
+export default app;

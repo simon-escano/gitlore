@@ -1,0 +1,11 @@
+name = "gitlore"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+CEREBRAS_MODEL = "llama3.1-8b"
+MAX_CONTEXT_CHARS = "12000"

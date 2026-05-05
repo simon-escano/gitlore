@@ -2,24 +2,21 @@
   "name": "gitlore",
   "version": "1.0.0",
   "type": "module",
-  "description": "Local-first portfolio intelligence API — zero cloud cost",
+  "description": "Portfolio intelligence API — Cloudflare Workers + Cerebras Cloud",
   "scripts": {
-    "dev": "tsx watch --env-file=.env src/index.ts",
-    "start": "tsx --env-file=.env src/index.ts",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "check:ollama": "curl -sf http://127.0.0.1:11434/api/tags > /dev/null && echo '✓ Ollama running' || echo '✗ Start Ollama: ollama serve'",
-    "predev": "pnpm run check:ollama",
-    "health": "curl -sf http://localhost:3000/ && echo ' ✓ OK' || echo ' ✗ Down'"
+    "health": "curl -sf http://localhost:8787/ && echo ' ✓ OK' || echo ' ✗ Down'"
   },
   "dependencies": {
-    "@hono/node-server": "^1",
     "hono": "^4",
     "zod": "^3",
     "zod-to-json-schema": "^3"
   },
   "devDependencies": {
-    "@types/node": "^22",
-    "tsx": "^4",
-    "typescript": "^5"
+    "@cloudflare/workers-types": "^4",
+    "typescript": "^5",
+    "wrangler": "^4"
   }
 }
