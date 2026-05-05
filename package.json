@@ -1,0 +1,13 @@
+{
+  "name": "gitlore",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r run dev",
+    "dev:api": "pnpm --filter api run dev",
+    "dev:web": "pnpm --filter web run dev",
+    "deploy": "pnpm -r run deploy",
+    "deploy:api": "pnpm --filter api run deploy",
+    "deploy:web": "pnpm --filter web run deploy",
+    "typecheck": "pnpm -r run typecheck"
+  }
+}
