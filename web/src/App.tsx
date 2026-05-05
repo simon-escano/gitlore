@@ -7,7 +7,7 @@ import { ProgressFeed } from "./components/progress/ProgressFeed";
 import { OutputTabs } from "./components/output/OutputTabs";
 import { useQueue } from "./lib/queue";
 import { streamGenerate } from "./lib/api";
-import { Zap, ArrowDown } from "lucide-react";
+import { ArrowDown, Sparkles } from "lucide-react";
 import type { GenerateRequest, ProgressEvent, GitloreOutput, QueueItem } from "./types/gitlore";
 
 export default function App() {
@@ -23,6 +23,9 @@ export default function App() {
     setResult(null);
     setError(null);
     setIsGenerating(true);
+
+    // Smooth scroll down to workspace
+    document.getElementById("workspace")?.scrollIntoView({ behavior: "smooth" });
 
     streamGenerate(req, {
       onProgress: (event) => setProgress((prev) => [...prev, event]),
@@ -54,39 +57,55 @@ export default function App() {
   const hasOutput = result || error || displayProgress.length > 0;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-grid-pattern bg-(--color-bg)">
       <Header />
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden border-b border-(--color-border)">
-          <div className="absolute inset-0 bg-gradient-to-b from-(--color-accent)/[0.03] to-transparent" />
-          <div className="relative mx-auto max-w-7xl px-6 py-16 sm:py-20">
-            <div className="flex items-center gap-2 text-(--color-accent)">
-              <Zap className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-widest">Portfolio Intelligence</span>
+      <main className="flex-1 relative">
+        {/* Soft Ambient Hero Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 h-[500px] w-full max-w-7xl rounded-full bg-indigo-500/[0.03] dark:bg-indigo-500/[0.015] blur-[120px] pointer-events-none" />
+
+        {/* Hero Section */}
+        <section className="relative overflow-hidden pt-20 pb-16 sm:pt-24 sm:pb-20">
+          <div className="mx-auto max-w-5xl px-6 text-center space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-950/40 px-3 py-1 text-xs text-zinc-500 backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-500 animate-pulse" />
+              <span className="font-medium uppercase tracking-wider text-[10px]">Portfolio Intelligence Engine</span>
             </div>
-            <h2 className="mt-4 max-w-xl text-4xl font-semibold tracking-tight text-(--color-text) sm:text-5xl">
-              Turn repos into case studies
-            </h2>
-            <p className="mt-3 max-w-lg text-base text-(--color-text-secondary)">
-              Analyze any GitHub repository and generate a structured, high-impact portfolio piece — powered by Cerebras inference on Cloudflare's edge.
+            
+            <h1 className="max-w-3xl mx-auto text-5xl sm:text-6xl font-light tracking-tight text-(--color-text) leading-[1.1]">
+              Transform source code into <br className="hidden sm:inline" />
+              <span className="font-normal text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-indigo-500 to-emerald-500 dark:from-violet-400 dark:via-indigo-400 dark:to-emerald-400">
+                stunning portfolio pieces
+              </span>
+            </h1>
+            
+            <p className="max-w-xl mx-auto text-base sm:text-lg text-(--color-text-secondary) font-light leading-relaxed">
+              Analyze any GitHub repository and craft high-impact case studies, structural flow diagrams, and grouped tech stacks instantly.
             </p>
-            <div className="mt-6">
-              <a href="#workspace" className="inline-flex items-center gap-1.5 text-sm font-medium text-(--color-accent) transition-colors hover:text-(--color-accent-hover)">
-                Get started
-                <ArrowDown className="h-3.5 w-3.5" />
+
+            <div className="pt-4">
+              <a
+                href="#workspace"
+                className="inline-flex items-center gap-2 rounded-full bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 px-6 py-3 text-sm font-medium text-white dark:text-zinc-900 shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+              >
+                Launch Workspace
+                <ArrowDown className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
               </a>
             </div>
           </div>
         </section>
 
-        {/* Workspace — side-by-side on desktop */}
-        <section id="workspace" className="mx-auto max-w-7xl px-6 py-8">
-          <div className={`grid gap-6 ${hasOutput ? "lg:grid-cols-[380px_1fr]" : "max-w-lg mx-auto"}`}>
-            {/* Left: Input panel */}
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-5">
+        {/* Workspace Grid Area */}
+        <section id="workspace" className="mx-auto max-w-7xl px-6 py-12 border-t border-(--color-border)/60">
+          <div className={`grid gap-8 transition-all duration-500 ${hasOutput ? "lg:grid-cols-[380px_1fr]" : "max-w-xl mx-auto"}`}>
+            
+            {/* Left Side: Inputs, Queue & Progress Log */}
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 shadow-[0_8px_30px_rgb(0,0,0,0.015)] dark:shadow-none">
+                <div className="mb-4 pb-4 border-b border-(--color-border)/60">
+                  <h3 className="text-sm font-medium text-(--color-text)">New Pipeline</h3>
+                  <p className="text-xs text-zinc-400">Ingest, analyze and format your case study.</p>
+                </div>
                 <GenerateForm
                   onSubmit={handleSubmit}
                   onAddToQueue={handleAddToQueue}
@@ -104,18 +123,19 @@ export default function App() {
                 onSelect={handleSelectQueueItem}
               />
 
-              {/* Progress feed — in sidebar on desktop */}
+              {/* Real-time SSE Stream Progress */}
               {(displayProgress.length > 0 || displayIsActive) && (
                 <ProgressFeed events={displayProgress} isActive={!!displayIsActive} />
               )}
             </div>
 
-            {/* Right: Output panel */}
+            {/* Right Side: Tabbed Layout Output (Preview vs JSON) */}
             {hasOutput && (
               <div className="space-y-4 animate-fade-up min-w-0">
                 {error && (
-                  <div className="rounded-2xl border border-(--color-error)/20 bg-(--color-error-subtle) p-4">
-                    <p className="text-sm font-medium text-(--color-error)">{error}</p>
+                  <div className="rounded-2xl border border-red-200 dark:border-red-950/30 bg-red-50/50 dark:bg-red-950/10 p-5">
+                    <p className="text-sm font-medium text-red-600 dark:text-red-400">Pipeline Execution Interrupted</p>
+                    <p className="mt-1 text-xs text-red-500/95 dark:text-red-400/80 leading-normal font-mono">{error}</p>
                   </div>
                 )}
 

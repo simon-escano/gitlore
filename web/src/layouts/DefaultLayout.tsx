@@ -1,24 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Zap, Layers, Shield, ExternalLink, Github, Clipboard, Check, ArrowRight,
+  Zap, Layers, Shield, ExternalLink, Github, Clipboard, Check, ArrowRight, ArrowDown,
   type LucideIcon,
 } from "lucide-react";
 import type { GitloreOutput } from "../types/gitlore";
-
-/**
- * ┌──────────────────────────────────────────────────────────────┐
- * │  DEFAULT LAYOUT — Edit this file to customize how the       │
- * │  portfolio output is rendered in the Preview tab.           │
- * │  This component receives the full GitloreOutput as props.   │
- * └──────────────────────────────────────────────────────────────┘
- */
 
 interface Props {
   data: GitloreOutput;
 }
 
 const iconMap: Record<string, LucideIcon> = {
-  zap: Zap, layers: Layers, shield: Shield, github: Github, link: ExternalLink,
+  zap: Zap,
+  layers: Layers,
+  shield: Shield,
+  github: Github,
+  link: ExternalLink,
 };
 
 function getIcon(name: string): LucideIcon {
@@ -26,13 +22,45 @@ function getIcon(name: string): LucideIcon {
 }
 
 const roleColors: Record<string, { text: string; bg: string; dot: string }> = {
-  Primary: { text: "text-(--color-role-primary)", bg: "bg-(--color-role-primary-subtle)", dot: "bg-(--color-role-primary)" },
-  Supporting: { text: "text-(--color-role-supporting)", bg: "bg-(--color-role-supporting-subtle)", dot: "bg-(--color-role-supporting)" },
-  Infrastructure: { text: "text-(--color-role-infra)", bg: "bg-(--color-role-infra-subtle)", dot: "bg-(--color-role-infra)" },
+  Primary: { text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30", dot: "bg-emerald-500" },
+  Supporting: { text: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/30", dot: "bg-violet-500" },
+  Infrastructure: { text: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30", dot: "bg-blue-500" },
 };
 
 function getRoleColor(role: string) {
   return roleColors[role] ?? roleColors.Supporting;
+}
+
+/**
+ * Robust Mermaid syntax sanitizer to catch common LLM formatting slips.
+ * Ensures node labels with spaces or punctuation (especially parentheses) are quoted.
+ */
+function cleanMermaidCode(code: string): string {
+  let cleaned = code.trim();
+
+  // Replace unquoted square bracket labels with quoted labels
+  // e.g. A[Browser (React SPA)] -> A["Browser (React SPA)"]
+  cleaned = cleaned.replace(/\b([a-zA-Z0-9_-]+)\s*\[([^"\]\n]+?)\]/g, (match, id, label) => {
+    if (!label.startsWith('"') || !label.endsWith('"')) {
+      return `${id}["${label.replace(/"/g, '\\"')}"]`;
+    }
+    return match;
+  });
+
+  // Replace unquoted parenthesis labels with quoted labels
+  // e.g. A(Database Server) -> A["Database Server"]
+  cleaned = cleaned.replace(/\b([a-zA-Z0-9_-]+)\s*\(([^"\)\n]+?)\)/g, (match, id, label) => {
+    if (!label.startsWith('"') || !label.endsWith('"')) {
+      const upperLabel = label.toUpperCase();
+      // Leave flowchart directions like LR, TD, TB alone
+      if (upperLabel !== "LR" && upperLabel !== "TD" && upperLabel !== "TB" && upperLabel !== "RL" && upperLabel !== "BT") {
+        return `${id}["${label.replace(/"/g, '\\"')}"]`;
+      }
+    }
+    return match;
+  });
+
+  return cleaned;
 }
 
 function MermaidDiagram({ code }: { code: string }) {
@@ -42,39 +70,67 @@ function MermaidDiagram({ code }: { code: string }) {
   useEffect(() => {
     if (!code || !containerRef.current) return;
     let cancelled = false;
+
+    // Helper to purge any stray elements Mermaid appends to document.body
+    const purgeLeakedElements = () => {
+      document.querySelectorAll('body > [id^="dmermaid"]').forEach((el) => el.remove());
+      document.querySelectorAll('body > [id^="mermaid-"]').forEach((el) => el.remove());
+    };
+
     (async () => {
       try {
         const mermaid = (await import("mermaid")).default;
+        
+        // Setup with suppressErrorRendering to prevent appending error boxes below footer
         mermaid.initialize({
           startOnLoad: false,
           theme: document.documentElement.classList.contains("dark") ? "dark" : "default",
           securityLevel: "loose",
+          suppressErrorRendering: true,
         });
+
+        purgeLeakedElements();
         if (cancelled) return;
-        const { svg } = await mermaid.render(`mermaid-${Date.now()}`, code);
+
+        const sanitizedCode = cleanMermaidCode(code);
+        const renderId = `mermaid-render-${Date.now()}`;
+        const { svg } = await mermaid.render(renderId, sanitizedCode);
+
         if (!cancelled && containerRef.current) {
           containerRef.current.innerHTML = svg;
           setError(null);
         }
       } catch (err) {
-        setError((err as Error).message);
-        if (containerRef.current) {
-          containerRef.current.innerHTML = `<pre class="text-xs text-(--color-text-muted) font-mono whitespace-pre-wrap">${code}</pre>`;
+        purgeLeakedElements();
+        if (!cancelled) {
+          setError((err as Error).message || "Mermaid rendering failed");
+          if (containerRef.current) {
+            containerRef.current.innerHTML = `
+              <div className="rounded-lg bg-red-50/50 dark:bg-red-950/10 p-3 border border-red-100 dark:border-red-900/20">
+                <p className="text-xs text-red-600 dark:text-red-400 font-mono whitespace-pre-wrap">${code}</p>
+              </div>
+            `;
+          }
         }
       }
     })();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+      purgeLeakedElements();
+    };
   }, [code]);
 
   return (
-    <>
-      <div ref={containerRef} className="flex justify-center overflow-x-auto" />
+    <div className="relative">
+      <div ref={containerRef} className="flex justify-center overflow-x-auto py-2" />
       {error && (
-        <p className="mt-2 rounded-lg bg-(--color-error-subtle) px-3 py-2 text-xs text-(--color-error) font-mono">
-          Mermaid syntax error: {error}
-        </p>
+        <div className="mt-3 rounded-lg bg-red-50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/20 px-3.5 py-2.5">
+          <p className="text-xs text-red-600 dark:text-red-400 font-medium">Mermaid Parsing Error</p>
+          <p className="mt-1 text-[11px] text-red-500/90 dark:text-red-400/80 font-mono leading-normal">{error}</p>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -90,16 +146,16 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
       onClick={handleCopy}
       className="inline-flex items-center gap-1.5 rounded-lg border border-(--color-border) bg-(--color-surface) px-2.5 py-1 text-xs font-medium text-(--color-text-secondary) transition-all hover:bg-(--color-bg-secondary) hover:text-(--color-text)"
     >
-      {copied ? <><Check className="h-3 w-3 text-(--color-success)" />Copied</> : <><Clipboard className="h-3 w-3" />{label}</>}
+      {copied ? <><Check className="h-3 w-3 text-emerald-500" />Copied</> : <><Clipboard className="h-3 w-3" />{label}</>}
     </button>
   );
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <h4 className="text-[11px] font-medium uppercase tracking-widest text-(--color-text-muted)">
+    <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
       {children}
-    </h4>
+    </span>
   );
 }
 
@@ -116,121 +172,167 @@ export function DefaultLayout({ data }: Props) {
   const sortedGroups = roleOrder.filter((r) => stackGroups[r]);
 
   return (
-    <div className="space-y-5 animate-fade-up">
-      {/* Hero */}
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-(--color-text)">{data.title}</h2>
-        <p className="mt-1 text-base text-(--color-text-secondary)">{data.one_liner}</p>
+    <div className="space-y-6 animate-fade-up">
+      {/* Header Case Study Identity */}
+      <div className="space-y-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+          Case Study
+        </span>
+        <h2 className="text-3xl font-light tracking-tight text-(--color-text) sm:text-4xl">
+          {data.title}
+        </h2>
+        <p className="text-lg text-(--color-text-secondary) font-light leading-relaxed">
+          {data.one_liner}
+        </p>
+        
         {data.contributions && (
-          <p className="mt-2 text-sm text-(--color-text-muted)">{data.contributions}</p>
+          <div className="pt-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-(--color-text-secondary)">Roles:</span>
+            {data.contributions.split(",").map((role, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center rounded-md bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:text-zinc-300"
+              >
+                {role.trim()}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Problem → Goal */}
-      {(data.problem || data.goal) && (
-        <div className="flex items-stretch gap-0 overflow-hidden rounded-2xl border border-(--color-border)">
-          {data.problem && (
-            <div className="flex-1 border-r border-(--color-border) bg-gradient-to-br from-(--color-problem-subtle) to-(--color-surface) p-4">
-              <SectionLabel>Problem</SectionLabel>
-              <p className="mt-2 text-sm text-(--color-text)">{data.problem}</p>
-            </div>
-          )}
-          {data.problem && data.goal && (
-            <div className="flex items-center bg-(--color-bg-secondary) px-3">
-              <ArrowRight className="h-4 w-4 text-(--color-text-muted)" />
-            </div>
-          )}
-          {data.goal && (
-            <div className="flex-1 bg-gradient-to-br from-(--color-goal-subtle) to-(--color-surface) p-4">
-              <SectionLabel>Goal</SectionLabel>
-              <p className="mt-2 text-sm text-(--color-text)">{data.goal}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Bento: Results + Stack */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        {/* Results trio */}
-        {data.results && (["performance", "scale", "utility"] as const).map((key) => {
-          const metric = data.results[key];
-          if (!metric?.text) return null;
-          const Icon = getIcon(metric.icon);
-          return (
-            <div key={key} className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-4 transition-all hover:border-(--color-accent)/30 hover:shadow-sm">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-(--color-accent-subtle)">
-                <Icon className="h-4 w-4 text-(--color-accent)" />
+      {/* Main Bento Grid */}
+      <div className="grid gap-4 md:grid-cols-3">
+        
+        {/* Row 1, Block 1: Problem & Goal connected visually (Spans 2 columns on desktop) */}
+        {(data.problem || data.goal) && (
+          <div className="md:col-span-2 flex flex-col md:flex-row items-stretch rounded-2xl border border-(--color-border) bg-(--color-surface) overflow-hidden transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+            {data.problem && (
+              <div className="flex-1 p-6 bg-gradient-to-br from-red-500/[0.03] via-transparent to-transparent">
+                <SectionLabel>Problem Space</SectionLabel>
+                <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
+                  {data.problem}
+                </p>
               </div>
-              <p className="mt-3 text-[11px] font-medium uppercase tracking-widest text-(--color-text-muted) capitalize">{key}</p>
-              <p className="mt-1 text-sm text-(--color-text)">{metric.text}</p>
+            )}
+            
+            {data.problem && data.goal && (
+              <div className="flex md:flex-col items-center justify-center bg-zinc-50/50 dark:bg-zinc-900/20 px-4 py-2 border-y md:border-y-0 md:border-x border-(--color-border)">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-(--color-bg) border border-(--color-border) shadow-sm">
+                  <ArrowRight className="hidden md:block h-4 w-4 text-zinc-400" />
+                  <ArrowDown className="block md:hidden h-4 w-4 text-zinc-400" />
+                </div>
+              </div>
+            )}
+            
+            {data.goal && (
+              <div className="flex-1 p-6 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-transparent">
+                <SectionLabel>Target Outcome</SectionLabel>
+                <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
+                  {data.goal}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Row 1, Block 2: Tech Stack (Spans 1 column on desktop) */}
+        {data.stack.length > 0 && (
+          <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+            <SectionLabel>Technology Blueprint</SectionLabel>
+            <div className="space-y-4">
+              {sortedGroups.map((role) => {
+                const items = stackGroups[role];
+                const rc = getRoleColor(role);
+                return (
+                  <div key={role} className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`h-1.5 w-1.5 rounded-full ${rc.dot}`} />
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">{role}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {items.map((s, i) => (
+                        <span
+                          key={i}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-medium ${rc.bg} ${rc.text}`}
+                        >
+                          {s.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+            {data.stack_reason && (
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 italic leading-relaxed pt-2 border-t border-(--color-border)">
+                {data.stack_reason}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Row 2, Block 1: Architecture Diagram (Spans 2 columns on desktop) */}
+        {data.architecture_diagram_code && (
+          <div className="md:col-span-2 rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+            <div className="flex items-center justify-between">
+              <SectionLabel>System Architecture</SectionLabel>
+              <CopyButton text={data.architecture_diagram_code} label="Mermaid Code" />
+            </div>
+            <div className="rounded-xl bg-zinc-50/50 dark:bg-zinc-900/30 border border-zinc-100 dark:border-zinc-900/40 p-4">
+              <MermaidDiagram code={data.architecture_diagram_code} />
+            </div>
+          </div>
+        )}
+
+        {/* Row 2, Block 2: Performance Metrics (Spans 1 column on desktop) */}
+        {data.results && (
+          <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+            <SectionLabel>Core Metrics</SectionLabel>
+            <div className="grid gap-3">
+              {(["performance", "scale", "utility"] as const).map((key) => {
+                const metric = data.results[key];
+                if (!metric?.text) return null;
+                const Icon = getIcon(metric.icon);
+                return (
+                  <div key={key} className="flex items-start gap-3.5 rounded-xl border border-zinc-100 dark:border-zinc-900/40 bg-zinc-50/30 dark:bg-zinc-900/10 p-3.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/30">
+                      <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 capitalize">{key}</p>
+                      <p className="text-sm text-(--color-text) font-normal leading-relaxed">{metric.text}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Row 3: Key Features (Spans all 3 columns as 3 side-by-side bento cards) */}
+        {data.key_features.length > 0 && (
+          <div className="md:col-span-3 grid gap-4 sm:grid-cols-3">
+            {data.key_features.map((f, i) => {
+              const Icon = getIcon(f.icon);
+              return (
+                <div key={i} className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-3 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 hover:shadow-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800/60">
+                    <Icon className="h-4 w-4 text-zinc-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Feature 0{i + 1}</span>
+                    <p className="text-sm text-(--color-text-secondary) leading-relaxed">{f.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Stack — grouped by role */}
-      {data.stack.length > 0 && (
-        <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-4 space-y-3">
-          <SectionLabel>Tech Stack</SectionLabel>
-          {sortedGroups.map((role) => {
-            const items = stackGroups[role];
-            const rc = getRoleColor(role);
-            return (
-              <div key={role}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`h-1.5 w-1.5 rounded-full ${rc.dot}`} />
-                  <span className={`text-xs font-medium ${rc.text}`}>{role}</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {items.map((s, i) => (
-                    <span
-                      key={i}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-medium ${rc.bg} ${rc.text}`}
-                    >
-                      {s.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-          {data.stack_reason && (
-            <p className="text-xs text-(--color-text-muted) pt-1">{data.stack_reason}</p>
-          )}
-        </div>
-      )}
-
-      {/* Architecture Diagram */}
-      {data.architecture_diagram_code && (
-        <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <SectionLabel>Architecture</SectionLabel>
-            <CopyButton text={data.architecture_diagram_code} label="Copy Mermaid" />
-          </div>
-          <div className="rounded-xl bg-(--color-bg-secondary) p-4">
-            <MermaidDiagram code={data.architecture_diagram_code} />
-          </div>
-        </div>
-      )}
-
-      {/* Bento: Features + Links */}
-      {data.key_features.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          {data.key_features.map((f, i) => {
-            const Icon = getIcon(f.icon);
-            return (
-              <div key={i} className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-4 transition-all hover:border-(--color-accent)/30 hover:shadow-sm">
-                <Icon className="h-4 w-4 text-(--color-accent)" />
-                <p className="mt-2 text-sm text-(--color-text)">{f.text}</p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Links */}
+      {/* Links & Repository References */}
       {data.links.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2 pt-2">
           {data.links.map((link, i) => {
             const Icon = getIcon(link.icon);
             return (
@@ -239,7 +341,7 @@ export function DefaultLayout({ data }: Props) {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-2.5 text-sm font-medium text-(--color-text-secondary) transition-all hover:border-(--color-accent)/30 hover:text-(--color-accent) hover:shadow-sm"
+                className="inline-flex items-center gap-2 rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 transition-all hover:border-zinc-400 dark:hover:border-zinc-700 hover:text-(--color-accent) hover:shadow-sm"
               >
                 <Icon className="h-4 w-4" />
                 {link.label}
