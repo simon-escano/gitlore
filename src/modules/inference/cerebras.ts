@@ -1,4 +1,4 @@
-import { config } from "../../lib/config";
+import type { AppConfig } from "../../lib/config";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt";
 import { GitloreOutputSchema } from "../../schemas/response";
 import { Errors } from "../../lib/errors";
@@ -6,7 +6,8 @@ import type { InferenceContext } from "../ingestion/types";
 import type { GitloreOutput } from "../../schemas/response";
 
 export async function analyzeWithCerebras(
-  context: InferenceContext
+  context: InferenceContext,
+  config: AppConfig
 ): Promise<GitloreOutput> {
   const startTime = Date.now();
 
@@ -53,7 +54,6 @@ export async function analyzeWithCerebras(
   }
 
   let fullContent = "";
-  let lastProgressUpdate = Date.now();
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -90,16 +90,9 @@ export async function analyzeWithCerebras(
         continue;
       }
     }
-
-    const now = Date.now();
-    if (now - lastProgressUpdate > 100) {
-      process.stdout.write(`\r  │  🧠 Generating stream... ${fullContent.length} chars received`);
-      lastProgressUpdate = now;
-    }
   }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  process.stdout.write("\n");
   console.log(`  ├─ Inference complete in ${elapsed}s`);
   console.log(`  ├─ Raw output: ${fullContent.length} chars`);
 

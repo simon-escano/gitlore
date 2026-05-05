@@ -13,12 +13,6 @@ export class GitloreError extends Error {
 }
 
 export const Errors = {
-  ollamaDown: () =>
-    new GitloreError(
-      "OLLAMA_UNREACHABLE",
-      503,
-      "Ollama is not running. Start it with: ollama serve"
-    ),
   repoNotFound: (owner: string, repo: string) =>
     new GitloreError("REPO_NOT_FOUND", 404, `Repository ${owner}/${repo} not found or is private`),
   invalidInput: (msg: string) =>
@@ -27,6 +21,4 @@ export const Errors = {
     new GitloreError("INFERENCE_FAILED", 502, msg),
   validationFailure: (msg: string) =>
     new GitloreError("VALIDATION_FAILED", 422, msg),
-  blockedEndpoint: (host: string) =>
-    new GitloreError("BLOCKED_ENDPOINT", 403, `Attempted call to non-local host: ${host}`),
 } as const;

@@ -1,4 +1,4 @@
-import { config } from "../../lib/config";
+import type { AppConfig } from "../../lib/config";
 import {
   ALLOWED_EXTENSIONS,
   IGNORED_PATHS,
@@ -27,15 +27,16 @@ function getFileName(path: string): string {
 
 export async function ingestRepository(
   owner: string,
-  repo: string
+  repo: string,
+  config: AppConfig
 ): Promise<RepoContext> {
   const startTime = Date.now();
 
   // Fetch metadata and README in parallel
   console.log(`  ├─ Fetching repo metadata and README...`);
   const [meta, readme] = await Promise.all([
-    fetchRepoMeta(owner, repo),
-    fetchReadme(owner, repo),
+    fetchRepoMeta(owner, repo, config),
+    fetchReadme(owner, repo, config),
   ]);
   console.log(`  ├─ Repo: ${meta.full_name} (${meta.language ?? "unknown lang"}, ⭐ ${meta.stargazers_count})`);
   console.log(`  ├─ Branch: ${meta.default_branch}`);
@@ -43,7 +44,7 @@ export async function ingestRepository(
 
   // Fetch file tree
   console.log(`  ├─ Fetching file tree...`);
-  const tree = await fetchFileTree(owner, repo, meta.default_branch);
+  const tree = await fetchFileTree(owner, repo, meta.default_branch, config);
 
   // Filter to blobs only, exclude ignored paths
   const blobs = tree.tree
@@ -99,7 +100,7 @@ export async function ingestRepository(
       break;
     }
 
-    const content = await fetchFileContent(owner, repo, filePath);
+    const content = await fetchFileContent(owner, repo, filePath, config);
     if (!content) continue;
 
     const block = `\n--- ${filePath} ---\n${content}\n`;
