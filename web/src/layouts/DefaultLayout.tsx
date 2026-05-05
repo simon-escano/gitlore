@@ -194,15 +194,51 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export function DefaultLayout({ data, onChange }: Props) {
   const [editedDiagramCode, setEditedDiagramCode] = useState(data.architecture_diagram_code);
+  const [inputText, setInputText] = useState(data.architecture_diagram_code);
+
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
+  
   const dragStart = useRef({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   // Sync edits from other sources (like the JSON editor)
   useEffect(() => {
-    setEditedDiagramCode(data.architecture_diagram_code);
+    setInputText(data.architecture_diagram_code);
   }, [data.architecture_diagram_code]);
+
+  // Debounce the compiled render and state updates to eliminate typing lag
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setEditedDiagramCode(inputText);
+      if (onChange) {
+        onChange({
+          ...data,
+          architecture_diagram_code: inputText,
+        });
+      }
+    }, 300); // 300ms debounce
+    return () => clearTimeout(timer);
+  }, [inputText]);
+
+  // Handle native Wheel events to lock scrolling on zoom motions
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+
+    const onWheelNative = (e: WheelEvent) => {
+      e.preventDefault(); // Stop page scrolling
+      const zoomFactor = 0.08;
+      const direction = e.deltaY < 0 ? 1 : -1;
+      setScale((prev) => Math.min(Math.max(prev + direction * zoomFactor, 0.4), 3));
+    };
+
+    el.addEventListener("wheel", onWheelNative, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheelNative);
+    };
+  }, []);
 
   // Diagram dragging / pan logic
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -222,29 +258,11 @@ export function DefaultLayout({ data, onChange }: Props) {
     setIsDragging(false);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    const zoomFactor = 0.08;
-    const direction = e.deltaY < 0 ? 1 : -1;
-    const newScale = Math.min(Math.max(scale + direction * zoomFactor, 0.4), 3);
-    setScale(newScale);
-  };
-
   const zoomIn = () => setScale((prev) => Math.min(prev + 0.15, 3));
   const zoomOut = () => setScale((prev) => Math.max(prev - 0.15, 0.4));
   const resetView = () => {
     setPan({ x: 0, y: 0 });
     setScale(1);
-  };
-
-  // Sync edited code back up to parent
-  const handleDiagramCodeChange = (newCode: string) => {
-    setEditedDiagramCode(newCode);
-    if (onChange) {
-      onChange({
-        ...data,
-        architecture_diagram_code: newCode,
-      });
-    }
   };
 
   // Group tech_stack by role
@@ -261,16 +279,19 @@ export function DefaultLayout({ data, onChange }: Props) {
   return (
     <div className="space-y-6 animate-fade-up">
       {/* Header Case Study Identity */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 shrink-0">
-              Case Study
-            </span>
-            <h2 className="text-3xl font-light tracking-tight text-(--color-text) sm:text-4xl">
-              {data.title}
-            </h2>
-          </div>
+      <div className="space-y-2">
+        {/* Case Study Badge on Top */}
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 shrink-0">
+            Case Study
+          </span>
+        </div>
+
+        {/* Title and Links Side-by-Side inline */}
+        <div className="flex flex-wrap items-center gap-3 pt-0.5">
+          <h2 className="text-3xl font-light tracking-tight text-(--color-text) sm:text-4xl">
+            {data.title}
+          </h2>
 
           {/* Link Buttons beside the title directly */}
           {data.links && data.links.length > 0 && (
@@ -397,24 +418,27 @@ export function DefaultLayout({ data, onChange }: Props) {
         {/* Section 4: Architecture Diagram (2/3 width) and Tech Stack (1/3 width) beside each other */}
         <div className="grid gap-4 md:grid-cols-3">
           
-          {/* System Architecture Diagram Card (Spans 2 columns on desktop) */}
-          <div className="md:col-span-2 rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm">
-            <SectionLabel>System Architecture</SectionLabel>
-            
-            {/* Diagram View (Top Part) - Draggable/Zoomable Canvas with background mesh */}
+          {/* System Architecture Card - Glued Seamless container */}
+          <div className="md:col-span-2 rounded-2xl border border-(--color-border) bg-(--color-surface) overflow-hidden shadow-sm flex flex-col transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
+            {/* Header bar of System Architecture box */}
+            <div className="px-5 py-3.5 border-b border-(--color-border)/50 bg-zinc-50/50 dark:bg-zinc-900/10 flex items-center justify-between shrink-0">
+              <SectionLabel>System Architecture</SectionLabel>
+            </div>
+
+            {/* Diagram View Canvas (Rounded Top boundaries, glued) */}
             <div
+              ref={canvasRef}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              onWheel={handleWheel}
-              className="relative overflow-hidden border border-(--color-border)/60 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/10 h-[340px] select-none cursor-grab active:cursor-grabbing group/canvas shadow-inner"
+              className="relative overflow-hidden bg-zinc-50/50 dark:bg-zinc-900/10 h-[320px] select-none cursor-grab active:cursor-grabbing group/canvas border-b border-(--color-border)/50 shrink-0"
             >
               {/* Dot blueprint mesh background */}
               <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none" />
 
               {/* Floating controls toolbar */}
-              <div className="absolute top-3.5 right-3.5 z-10 flex items-center gap-1.5 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg border border-(--color-border) p-1 shadow-sm opacity-60 group-hover/canvas:opacity-100 transition-opacity">
+              <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md rounded-lg border border-(--color-border) p-1 shadow-sm opacity-60 group-hover/canvas:opacity-100 transition-opacity">
                 <button
                   type="button"
                   onClick={zoomIn}
@@ -453,19 +477,19 @@ export function DefaultLayout({ data, onChange }: Props) {
               </div>
             </div>
 
-            {/* Code View (Bottom Part) - Simultaneously shown and editable */}
-            <div className="space-y-2.5 pt-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">
-                  Diagram Source Code
-                </span>
-                <CopyButton text={editedDiagramCode} label="Copy Syntax" />
+            {/* Code View (Bottom Part) - Glued seamless text editor, no spacing, Copy button inside */}
+            <div className="relative group/code flex-1 min-h-0">
+              {/* Copy Code Button inside the textarea box */}
+              <div className="absolute top-3 right-3 z-10 opacity-0 group-hover/code:opacity-100 transition-opacity">
+                <CopyButton text={inputText} label="Copy code" />
               </div>
+
               <textarea
-                value={editedDiagramCode}
-                onChange={(e) => handleDiagramCodeChange(e.target.value)}
-                className="w-full h-36 font-mono text-[11px] leading-relaxed p-4 bg-zinc-950 text-zinc-100 rounded-xl border border-(--color-border) focus:outline-none focus:ring-1 focus:ring-(--color-accent)/40 resize-y shadow-inner"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                className="w-full h-32 font-mono text-[11px] leading-relaxed p-4 bg-zinc-950 text-zinc-100 rounded-b-2xl border-none focus:outline-none focus:ring-1 focus:ring-(--color-accent)/30 resize-none shadow-inner block"
                 spellCheck={false}
+                placeholder="Mermaid source syntax..."
               />
             </div>
           </div>
