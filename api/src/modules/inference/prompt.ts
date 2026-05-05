@@ -39,6 +39,11 @@ The JSON MUST strictly satisfy this TypeScript interface:
 
 ${TS_INTERFACE}
 
+CRITICAL STRUCTURAL RULES (COMPLIANCE MANDATORY):
+- Your response MUST start directly with the actual JSON instance object, beginning with the \`_thinking\` key: \`{"_thinking": "..."\`.
+- NEVER include JSON Schema metadata elements like \`"type": "object"\`, \`"properties"\`, or \`"required"\` at the root of your JSON.
+- DO NOT wrap the output in any other object or add any markdown wrappers (do NOT use \`\`\`json).
+
 RULES (CRITICAL):
 1. THINK FIRST: You MUST write a brief, highly concise architectural planning and system analysis under 150 words total in the \`_thinking\` field FIRST. Keep this planning phase very short to preserve token space.
 2. STACK LIMIT: You MUST limit the \`tech_stack\` array to a maximum of 6 items. Select only the most important technologies.
@@ -52,7 +57,7 @@ RULES (CRITICAL):
 }
 
 export function buildUserPrompt(context: InferenceContext): string {
-  const fileTreeSample = context.fileTree.slice(0, 50).join("\\n");
+  const fileTreeSample = context.fileTree.slice(0, 30).join("\\n");
 
   return `## Target Output Identity
 Title: ${context.title}
@@ -63,7 +68,7 @@ Additional Context: ${context.context ?? "None provided"}
 ## Repository: ${context.owner}/${context.repo}
 ## Description: ${context.description ?? "No description provided"}
 
-## File Tree (first 50 files):
+## File Tree (first 30 files):
 ${fileTreeSample}
 
 ## README:

@@ -42,10 +42,16 @@ export async function ingestRepository(
 
   // Fetch metadata and README in parallel
   onProgress({ phase: "ingestion", message: "Fetching repo metadata and README..." });
-  const [meta, readme] = await Promise.all([
+  const [meta, rawReadme] = await Promise.all([
     fetchRepoMeta(owner, repo, config),
     fetchReadme(owner, repo, config),
   ]);
+
+  // Truncate README to preserve model's context window headroom (max 4000 chars)
+  const readme = rawReadme.length > 4000
+    ? rawReadme.slice(0, 4000) + "\n\n... [README truncated to preserve token budget] ..."
+    : rawReadme;
+
   onProgress({
     phase: "ingestion",
     message: `Repo: ${meta.full_name}`,
