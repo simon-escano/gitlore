@@ -13,48 +13,67 @@ interface ValidationFailure {
 }
 
 /**
- * Normalizes and sanitizes Mermaid syntax to prevent rendering errors.
- * Ensures inner quotes are escaped as single quotes and bracket labels are quoted properly.
+ * Robust lexical scanner that normalizes and sanitizes Mermaid syntax.
+ * Correctly matches matching outer brackets and replaces any nested double-quotes
+ * with the standard Mermaid HTML entity `&quot;`.
  */
 function cleanMermaidCode(code: string): string {
-  let cleaned = code.trim();
-
-  // Replace unquoted square bracket labels with quoted labels
-  // e.g. A[Browser (React SPA)] -> A["Browser (React SPA)"]
-  cleaned = cleaned.replace(/\b([a-zA-Z0-9_-]+)\s*\[([^"\]\n]+?)\]/g, (match, id, label) => {
-    if (!label.startsWith('"') || !label.endsWith('"')) {
-      return `${id}["${label.replace(/"/g, '\\"')}"]`;
+  const lines = code.split("\n");
+  const cleanedLines = lines.map((line) => {
+    let result = "";
+    let i = 0;
+    while (i < line.length) {
+      // Look for a node definition: identifier followed by [ or (
+      const match = line.slice(i).match(/^([a-zA-Z0-9_-]+)\s*(\[|\()/);
+      if (match) {
+        const id = match[1];
+        const openChar = match[2];
+        const closeChar = openChar === "[" ? "]" : ")";
+        
+        // Find matching closing bracket with depth counting
+        const startBracketIdx = i + match[0].length - 1;
+        let depth = 1;
+        let endBracketIdx = -1;
+        for (let j = startBracketIdx + 1; j < line.length; j++) {
+          if (line[j] === openChar) depth++;
+          else if (line[j] === closeChar) depth--;
+          
+          if (depth === 0) {
+            endBracketIdx = j;
+            break;
+          }
+        }
+        
+        if (endBracketIdx !== -1) {
+          // Extract the content inside the brackets
+          const rawLabel = line.slice(startBracketIdx + 1, endBracketIdx).trim();
+          let label = rawLabel;
+          
+          // Strip outer quotes if present
+          if (label.startsWith('"') && label.endsWith('"') && label.length >= 2) {
+            label = label.slice(1, -1);
+          }
+          
+          // Replace any inner double quotes with the HTML entity &quot;
+          label = label.replace(/"/g, "&quot;");
+          
+          // Re-wrap in double-quoted brackets
+          result += `${id}["${label}"]`;
+          
+          // Move index past the closing bracket
+          i = endBracketIdx + 1;
+          continue;
+        }
+      }
+      
+      // If no node match, just copy character and advance
+      result += line[i];
+      i++;
     }
-    return match;
+    return result;
   });
-
-  // Handle nested/improper quotes inside square brackets: ID["Browser["React SPA"]"] -> ID["Browser['React SPA']"]
-  cleaned = cleaned.replace(/\b([a-zA-Z0-9_-]+)\s*\[(.*?)\]/g, (_match, id, label) => {
-    let inner = label.trim();
-    if (inner.startsWith('"') && inner.endsWith('"')) {
-      inner = inner.slice(1, -1);
-    }
-    inner = inner.replace(/"/g, "'");
-    return `${id}["${inner}"]`;
-  });
-
-  // Handle nested/improper quotes inside parentheses: ID(Browser (React SPA)) -> ID["Browser (React SPA)"]
-  cleaned = cleaned.replace(/\b([a-zA-Z0-9_-]+)\s*\((.*?)\)/g, (_match, id, label) => {
-    let inner = label.trim();
-    const upperLabel = inner.toUpperCase();
-    
-    if (upperLabel === "LR" || upperLabel === "TD" || upperLabel === "TB" || upperLabel === "RL" || upperLabel === "BT") {
-      return _match;
-    }
-    
-    if (inner.startsWith('"') && inner.endsWith('"')) {
-      inner = inner.slice(1, -1);
-    }
-    inner = inner.replace(/"/g, "'");
-    return `${id}["${inner}"]`;
-  });
-
-  return cleaned;
+  
+  return cleanedLines.join("\n");
 }
 
 export function validateOutput(
