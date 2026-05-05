@@ -4,8 +4,14 @@
 
 Gitlore transforms any GitHub repository into a structured, high-impact technical case study. The API runs on **Cloudflare Workers** and the frontend on **Cloudflare Pages** — both on the free tier at zero cost.
 
+### 🔗 Try It Live
+* 🌐 **React SPA Dashboard**: [https://web.gitlore.workers.dev](https://web.gitlore.workers.dev)
+* ⚙️ **REST API Gateway**: [https://api.gitlore.workers.dev](https://api.gitlore.workers.dev)
+
 > [!NOTE]
 > Gitlore is completely free to run. Cloudflare Workers (100K req/day), Cloudflare Pages (unlimited sites), and Cerebras Cloud (free inference) — no credit card required.
+
+---
 
 ## 🏗️ Architecture
 
@@ -25,15 +31,15 @@ gitlore/
 │   ├── src/
 │   │   ├── index.ts        # Hono app with CORS
 │   │   ├── routes/         # /api/generate + /api/generate/stream (SSE)
-│   │   ├── modules/        # ingestion, inference, validation
+│   │   ├── modules/        # Ingestion (subrequest budget-capped), inference, validation
 │   │   ├── schemas/        # Zod request/response schemas
 │   │   └── lib/            # config, errors, constants, progress
 │   ├── wrangler.toml
 │   └── package.json
 ├── web/                    # Cloudflare Pages — React + Tailwind v4
 │   ├── src/
-│   │   ├── App.tsx         # Main app shell
-│   │   ├── components/     # Input, Progress, Output components
+│   │   ├── App.tsx         # Main app shell & workspaces
+│   │   ├── components/     # Live JSON, Interactive Mermaid canvas editors
 │   │   ├── layouts/        # Customizable portfolio layout
 │   │   ├── lib/            # SSE client, theme, queue state
 │   │   └── types/          # Frontend type definitions
@@ -43,16 +49,20 @@ gitlore/
 └── pnpm-workspace.yaml
 ```
 
-## 🖥️ Frontend Features
+---
+
+## 🖥️ Frontend & Workspace Features
 
 | Feature | Description |
 |---------|-------------|
-| **Real-time Progress** | SSE streaming shows live ingestion/inference/validation events with Lucide icons |
-| **Bulk Queue** | Queue multiple repos for sequential processing |
-| **JSON View** | Syntax-highlighted output with copy-to-clipboard |
-| **Preview View** | Rich portfolio card with Mermaid diagrams rendered as SVG |
-| **Customizable Layout** | Edit `web/src/layouts/DefaultLayout.tsx` to change the output UI |
-| **Theme System** | Dark / Light / System with smooth transitions |
+| **Real-time Stages Progress** | SSE streaming captures step-by-step progress categorized into Ingestion, Inference, and Validation. Shows in a frosted Glassmorphism backdrop modal. |
+| **Interactive Diagram Canvas** | Dual-pane Mermaid.js section showing live-rendered SVGs and a text editor simultaneously. Supports pan-and-zoom and real-time live editing of the architecture diagram. |
+| **Live JSON Workspace Editor** | Syntax-highlighted, interactive JSON code editor with a floating copy-code trigger. Live edits synchronize instantly back into the visual Bento grid case study! |
+| **Dual Bulk-Queue** | Queue multiple repositories for sequential processing, switching between queue previews with automatic result-caching. |
+| **Collapsible Diagnostics** | Embedded "See more details" collapsible tray on pipeline errors displaying full backtrace stacks or JSON schemas. |
+| **Theme System** | Dark / Light / System with smooth CSS animations and CSS-variable blending. |
+
+---
 
 ## 📦 Setup
 
@@ -103,6 +113,8 @@ pnpm deploy:api   # API only
 pnpm deploy:web   # Web only
 ```
 
+---
+
 ## 🎮 API Usage
 
 The API has two endpoints:
@@ -121,9 +133,13 @@ curl -N -X POST https://api.gitlore.workers.dev/api/generate/stream \
   -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "contributions": "Built the API and database layer" }'
 ```
 
+---
+
 ## 🎨 Customizing the Portfolio Layout
 
-Edit `web/src/layouts/DefaultLayout.tsx` — this single file controls how portfolio output is rendered in the Preview tab. The component receives the full `GitloreOutput` as props.
+Edit `web/src/layouts/DefaultLayout.tsx` — this controls how your bento-grid portfolio output is rendered in the Preview tab. The component receives the full `GitloreOutput` as props, updating reactively on any live workspace edits.
+
+---
 
 ## 📊 Scripts
 
@@ -135,15 +151,19 @@ Edit `web/src/layouts/DefaultLayout.tsx` — this single file controls how portf
 | `pnpm deploy` | Deploy both to Cloudflare |
 | `pnpm typecheck` | TypeScript check both packages |
 
+---
+
 ## 💰 Cost Breakdown
 
 | Service | Tier | Cost |
 |---------|------|------|
-| Cloudflare Workers | Free (100K req/day) | **$0** |
+| Cloudflare Workers | Free (100K req/day, max 50 subrequests/run) | **$0** |
 | Cloudflare Pages | Free (unlimited sites) | **$0** |
-| Cerebras Cloud | Free (rate-limited) | **$0** |
-| GitHub REST API | Free (5K req/hr with PAT) | **$0** |
+| Cerebras Cloud | Free (rate-limited, high-speed Llama completions) | **$0** |
+| GitHub REST API | Free (5K req/hr with GITHUB_PAT) | **$0** |
 | **Total** | | **$0/month** |
+
+---
 
 ## 🛡️ License
 MIT
