@@ -1,26 +1,25 @@
 import { Hono } from "hono";
+import { streamSSE } from "hono/streaming";
 import { GenerateRequestSchema } from "../schemas/request";
 import { ingestRepository } from "../modules/ingestion/packer";
 import { analyzeWithCerebras } from "../modules/inference/cerebras";
 import { validateOutput } from "../modules/validation/schema";
 import { GitloreError, Errors } from "../lib/errors";
-import { getConfig, type Bindings, type AppConfig } from "../lib/config";
+import { getConfig, type Bindings } from "../lib/config";
+import { noopProgress, type ProgressCallback } from "../lib/progress";
 
 type Env = { Bindings: Bindings };
 
 export const generateRoute = new Hono<Env>();
 
-generateRoute.post("/generate", async (c) => {
+/** Shared pipeline logic used by both the regular and SSE endpoints */
+async function runPipeline(
+  env: Bindings,
+  body: unknown,
+  onProgress: ProgressCallback = noopProgress
+) {
   const requestStart = Date.now();
-  const config = getConfig(c.env);
-
-  // Parse and validate request body
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    throw Errors.invalidInput("Request body must be valid JSON");
-  }
+  const config = getConfig(env);
 
   const parsed = GenerateRequestSchema.safeParse(body);
   if (!parsed.success) {
@@ -31,7 +30,6 @@ generateRoute.post("/generate", async (c) => {
 
   const { url, title, role, context, gallery } = parsed.data;
 
-  // Extract owner and repo from URL
   const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!match) {
     throw Errors.invalidInput(
@@ -42,45 +40,88 @@ generateRoute.post("/generate", async (c) => {
   const repo = match[2].replace(/\.git$/, "");
 
   console.log(`⚡ POST /api/generate — ${owner}/${repo}`);
-  console.log(`   Title: "${title}" | Role: "${role}"`);
 
-  // Step 1: Ingest repository
-  console.log(`📦 STEP 1/3: Ingestion`);
-  const repoContext = await ingestRepository(owner, repo, config);
+  // Step 1: Ingest
+  onProgress({ phase: "ingestion", message: `Starting ingestion for ${owner}/${repo}` });
+  const repoContext = await ingestRepository(owner, repo, config, onProgress);
 
-  console.log(
-    `📦 Ingested: ${repoContext.fileTree.length} files discovered, ${repoContext.packedSource.length.toLocaleString()} chars packed`
-  );
+  const inferenceContext = { ...repoContext, title, role, context, gallery };
 
-  const inferenceContext = {
-    ...repoContext,
-    title,
-    role,
-    context,
-    gallery,
-  };
+  // Step 2: Inference
+  onProgress({ phase: "inference", message: "Sending to Cerebras Cloud..." });
+  const output = await analyzeWithCerebras(inferenceContext, config, onProgress);
 
-  // Step 2: Run inference
-  console.log(`🧠 STEP 2/3: Inference`);
-  const output = await analyzeWithCerebras(inferenceContext, config);
-
-  // Step 3: Validate output (second Zod pass + Mermaid check)
-  console.log(`✔  STEP 3/3: Validation`);
+  // Step 3: Validation
+  onProgress({ phase: "validation", message: "Running schema validation..." });
   const validation = validateOutput(output);
   if (!validation.success) {
-    console.log(`   ✗ Validation failed: ${validation.error}`);
     throw Errors.validationFailure(validation.error);
   }
-  console.log(`   ✓ Schema + Mermaid validation passed`);
+  onProgress({ phase: "validation", message: "Schema + Mermaid validation passed" });
 
-  // Forcibly inject the user's gallery array back into the final payload
-  // so we don't rely on the 3B model to remember to copy it.
   validation.data.gallery = gallery;
 
   const totalElapsed = ((Date.now() - requestStart) / 1000).toFixed(1);
-  console.log(`✅ Case study generated for ${owner}/${repo} in ${totalElapsed}s`);
-  console.log(`   Title: "${validation.data.title}"`);
-  console.log(`   Stack: ${validation.data.stack.map(s => s.name).join(", ")}`);
+  console.log(`✅ Generated in ${totalElapsed}s`);
 
-  return c.json({ data: validation.data });
+  return validation.data;
+}
+
+/** Original JSON endpoint (backwards compatible) */
+generateRoute.post("/generate", async (c) => {
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    throw Errors.invalidInput("Request body must be valid JSON");
+  }
+
+  const data = await runPipeline(c.env, body);
+  return c.json({ data });
+});
+
+/** SSE streaming endpoint with progress events */
+generateRoute.post("/generate/stream", async (c) => {
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    throw Errors.invalidInput("Request body must be valid JSON");
+  }
+
+  // Prevent Wrangler/CF buffering
+  c.header("Content-Encoding", "Identity");
+
+  return streamSSE(c, async (stream) => {
+    let eventId = 0;
+
+    const onProgress: ProgressCallback = (event) => {
+      stream.writeSSE({
+        event: "progress",
+        data: JSON.stringify(event),
+        id: String(++eventId),
+      });
+    };
+
+    try {
+      const data = await runPipeline(c.env, body, onProgress);
+
+      await stream.writeSSE({
+        event: "result",
+        data: JSON.stringify({ data }),
+        id: String(++eventId),
+      });
+    } catch (err) {
+      const message = err instanceof GitloreError
+        ? err.message
+        : "An unexpected error occurred";
+      const code = err instanceof GitloreError ? err.code : "INTERNAL_ERROR";
+
+      await stream.writeSSE({
+        event: "error",
+        data: JSON.stringify({ error: { code, message } }),
+        id: String(++eventId),
+      });
+    }
+  });
 });

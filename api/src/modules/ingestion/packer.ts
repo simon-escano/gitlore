@@ -1,4 +1,5 @@
 import type { AppConfig } from "../../lib/config";
+import { noopProgress, type ProgressCallback } from "../../lib/progress";
 import {
   ALLOWED_EXTENSIONS,
   IGNORED_PATHS,
@@ -28,33 +29,38 @@ function getFileName(path: string): string {
 export async function ingestRepository(
   owner: string,
   repo: string,
-  config: AppConfig
+  config: AppConfig,
+  onProgress: ProgressCallback = noopProgress
 ): Promise<RepoContext> {
   const startTime = Date.now();
 
   // Fetch metadata and README in parallel
-  console.log(`  ├─ Fetching repo metadata and README...`);
+  onProgress({ phase: "ingestion", message: "Fetching repo metadata and README..." });
   const [meta, readme] = await Promise.all([
     fetchRepoMeta(owner, repo, config),
     fetchReadme(owner, repo, config),
   ]);
-  console.log(`  ├─ Repo: ${meta.full_name} (${meta.language ?? "unknown lang"}, ⭐ ${meta.stargazers_count})`);
-  console.log(`  ├─ Branch: ${meta.default_branch}`);
-  console.log(`  ├─ README: ${readme.length} chars`);
+  onProgress({
+    phase: "ingestion",
+    message: `Repo: ${meta.full_name}`,
+    detail: `${meta.language ?? "unknown"}, ⭐ ${meta.stargazers_count}, branch: ${meta.default_branch}`,
+  });
 
   // Fetch file tree
-  console.log(`  ├─ Fetching file tree...`);
+  onProgress({ phase: "ingestion", message: "Fetching file tree..." });
   const tree = await fetchFileTree(owner, repo, meta.default_branch, config);
 
-  // Filter to blobs only, exclude ignored paths
   const blobs = tree.tree
     .filter((e) => e.type === "blob" && !isIgnored(e.path))
     .map((e) => ({ path: e.path, size: e.size ?? 0 }));
 
   const fileTree = blobs.map((b) => b.path);
-  console.log(`  ├─ File tree: ${tree.tree.length} total → ${blobs.length} after filtering`);
+  onProgress({
+    phase: "ingestion",
+    message: `File tree: ${tree.tree.length} total → ${blobs.length} after filtering`,
+  });
 
-  // Tier 1: Priority files (package.json, go.mod, etc.)
+  // Tier 1: Priority files
   const priorityPaths = blobs
     .filter((b) => PRIORITY_FILES.includes(getFileName(b.path)))
     .map((b) => b.path);
@@ -65,26 +71,19 @@ export async function ingestRepository(
     .filter((b) => !priorityPaths.includes(b.path))
     .map((b) => b.path);
 
-  // Tier 3: Other source files (by allowed extension)
+  // Tier 3: Source files
   const sourcePaths = blobs
     .filter((b) => hasAllowedExtension(b.path))
     .filter((b) => !priorityPaths.includes(b.path) && !entryPaths.includes(b.path))
     .sort((a, b) => {
-      // 1. Prioritize shallower files (closer to root)
       const depthA = a.path.split("/").length;
       const depthB = b.path.split("/").length;
       if (depthA !== depthB) return depthA - depthB;
-
-      // 2. Secondary: Smaller files first
       return a.size - b.size;
     })
     .map((b) => b.path);
 
-  console.log(`  ├─ Tier 1 (priority): ${priorityPaths.length} files ${priorityPaths.length > 0 ? `[${priorityPaths.join(", ")}]` : ""}`);
-  console.log(`  ├─ Tier 2 (entry pts): ${entryPaths.length} files ${entryPaths.length > 0 ? `[${entryPaths.join(", ")}]` : ""}`);
-  console.log(`  ├─ Tier 3 (source):    ${sourcePaths.length} files`);
-
-  // Pack files in priority order within the character budget
+  // Pack files within budget
   const budget = config.inference.maxContextChars;
   let packed = "";
   let packageInfo = "";
@@ -92,27 +91,18 @@ export async function ingestRepository(
 
   const orderedPaths = [...priorityPaths, ...entryPaths, ...sourcePaths];
 
-  console.log(`  ├─ Packing files (budget: ${budget.toLocaleString()} chars)...`);
+  onProgress({ phase: "ingestion", message: `Packing files (budget: ${budget.toLocaleString()} chars)...` });
 
   for (const filePath of orderedPaths) {
-    if (packed.length >= budget) {
-      console.log(`  │  ⚠ Budget reached, stopping.`);
-      break;
-    }
+    if (packed.length >= budget) break;
 
     const content = await fetchFileContent(owner, repo, filePath, config);
     if (!content) continue;
 
     const block = `\n--- ${filePath} ---\n${content}\n`;
-
-    // Capture package info separately
     const name = getFileName(filePath);
-    if (
-      name === "package.json" ||
-      name === "go.mod" ||
-      name === "Cargo.toml" ||
-      name === "pyproject.toml"
-    ) {
+
+    if (["package.json", "go.mod", "Cargo.toml", "pyproject.toml"].includes(name)) {
       packageInfo += block;
     }
 
@@ -120,12 +110,20 @@ export async function ingestRepository(
       packed += block;
       packedCount++;
       const pct = ((packed.length / budget) * 100).toFixed(0);
-      console.log(`  │  ✓ ${filePath} (+${content.length} chars, ${pct}% budget used)`);
+      onProgress({
+        phase: "ingestion",
+        message: `Reading ${filePath}`,
+        detail: `+${content.length} chars, ${pct}% budget used`,
+      });
     }
   }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`  └─ Ingestion complete: ${packedCount} files packed, ${packed.length.toLocaleString()} chars in ${elapsed}s`);
+  onProgress({
+    phase: "ingestion",
+    message: `Ingestion complete: ${packedCount} files packed in ${elapsed}s`,
+    detail: `${packed.length.toLocaleString()} chars total`,
+  });
 
   return {
     owner,

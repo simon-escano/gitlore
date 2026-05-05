@@ -1,4 +1,5 @@
 import type { AppConfig } from "../../lib/config";
+import { noopProgress, type ProgressCallback } from "../../lib/progress";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt";
 import { GitloreOutputSchema } from "../../schemas/response";
 import { Errors } from "../../lib/errors";
@@ -7,7 +8,8 @@ import type { GitloreOutput } from "../../schemas/response";
 
 export async function analyzeWithCerebras(
   context: InferenceContext,
-  config: AppConfig
+  config: AppConfig,
+  onProgress: ProgressCallback = noopProgress
 ): Promise<GitloreOutput> {
   const startTime = Date.now();
 
@@ -23,9 +25,8 @@ export async function analyzeWithCerebras(
     stream: true,
   };
 
-  console.log(`  ├─ Provider: Cerebras Cloud (WSE-3)`);
-  console.log(`  ├─ Model: ${config.cerebras.model}`);
-  console.log(`  ├─ Sending prompt to api.cerebras.ai...`);
+  onProgress({ phase: "inference", message: `Model: ${config.cerebras.model}` });
+  onProgress({ phase: "inference", message: "Sending prompt to Cerebras Cloud..." });
 
   let res: Response;
   try {
@@ -54,11 +55,11 @@ export async function analyzeWithCerebras(
   }
 
   let fullContent = "";
-
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let ttftReported = false;
+  let lastProgressAt = 0;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -66,7 +67,6 @@ export async function analyzeWithCerebras(
 
     buffer += decoder.decode(value, { stream: true });
 
-    // Cerebras returns OpenAI SSE format: "data: {...}\n\n"
     const lines = buffer.split("\n\n");
     buffer = lines.pop() ?? "";
 
@@ -81,41 +81,48 @@ export async function analyzeWithCerebras(
         if (content) {
           if (!ttftReported) {
             const ttft = ((Date.now() - startTime) / 1000).toFixed(2);
-            console.log(`  ├─ TTFT (Time to First Token): ${ttft}s`);
+            onProgress({ phase: "inference", message: `Time to first token: ${ttft}s` });
             ttftReported = true;
           }
           fullContent += content;
         }
-      } catch (e) {
+      } catch {
         continue;
       }
+    }
+
+    // Throttle streaming progress updates to every 500ms
+    const now = Date.now();
+    if (now - lastProgressAt > 500) {
+      onProgress({
+        phase: "inference",
+        message: "Generating...",
+        detail: `${fullContent.length.toLocaleString()} chars received`,
+      });
+      lastProgressAt = now;
     }
   }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`  ├─ Inference complete in ${elapsed}s`);
-  console.log(`  ├─ Raw output: ${fullContent.length} chars`);
+  onProgress({
+    phase: "inference",
+    message: `Inference complete in ${elapsed}s`,
+    detail: `${fullContent.length.toLocaleString()} chars total`,
+  });
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(fullContent);
   } catch {
-    console.log(`  ├─ ✗ JSON parse failed.`);
-    throw Errors.inferenceFailure(
-      "Cerebras returned invalid JSON: " + fullContent.slice(0, 200)
-    );
+    throw Errors.inferenceFailure("Cerebras returned invalid JSON: " + fullContent.slice(0, 200));
   }
 
-  console.log(`  ├─ ✓ JSON parsed successfully`);
+  onProgress({ phase: "inference", message: "JSON parsed successfully" });
 
   const result = GitloreOutputSchema.safeParse(parsed);
   if (!result.success) {
-    console.log(`  ├─ ✗ Schema validation failed`);
-    throw Errors.validationFailure(
-      "Model output failed schema validation: " + result.error.message
-    );
+    throw Errors.validationFailure("Model output failed schema validation: " + result.error.message);
   }
 
-  console.log(`  └─ ✓ Schema validation passed`);
   return result.data;
 }
