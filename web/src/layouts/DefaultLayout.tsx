@@ -193,7 +193,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export function DefaultLayout({ data }: Props) {
   // Group stack by role
-  const stackGroups = data.stack.reduce<Record<string, typeof data.stack>>((acc, item) => {
+  const stackGroups = (data.tech_stack || []).reduce<Record<string, typeof data.tech_stack>>((acc, item) => {
     const role = item.role || "Supporting";
     if (!acc[role]) acc[role] = [];
     acc[role].push(item);
@@ -206,13 +206,39 @@ export function DefaultLayout({ data }: Props) {
   return (
     <div className="space-y-6 animate-fade-up">
       {/* Header Case Study Identity */}
-      <div className="space-y-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-          Case Study
-        </span>
-        <h2 className="text-3xl font-light tracking-tight text-(--color-text) sm:text-4xl">
-          {data.title}
-        </h2>
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+              Case Study
+            </span>
+            <h2 className="text-3xl font-light tracking-tight text-(--color-text) sm:text-4xl">
+              {data.title}
+            </h2>
+          </div>
+
+          {/* Link Buttons Beside Title as Premium Icon Buttons */}
+          {data.links && data.links.length > 0 && (
+            <div className="flex items-center gap-2">
+              {data.links.map((link, i) => {
+                const Icon = getIcon(link.icon);
+                return (
+                  <a
+                    key={i}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={link.label}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border) bg-(--color-surface) text-zinc-400 hover:text-(--color-accent) hover:border-zinc-300 dark:hover:border-zinc-800 transition-all hover:scale-105 shadow-sm"
+                  >
+                    <Icon className="h-4.5 w-4.5" />
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <p className="text-lg text-(--color-text-secondary) font-light leading-relaxed">
           {data.one_liner}
         </p>
@@ -232,115 +258,43 @@ export function DefaultLayout({ data }: Props) {
         )}
       </div>
 
-      {/* Main Balanced Bento Grid */}
+      {/* Main Structural Bento Layout */}
       <div className="space-y-4">
         
-        {/* Row 1: Problem/Goal (2/3 width) and Tech Stack (1/3 width) */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {(data.problem || data.goal) && (
-            <div className="md:col-span-2 flex flex-col md:flex-row items-stretch rounded-2xl border border-(--color-border) bg-(--color-surface) overflow-hidden transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
-              {data.problem && (
-                <div className="flex-1 p-6 bg-gradient-to-br from-red-500/[0.03] via-transparent to-transparent">
-                  <SectionLabel>Problem Space</SectionLabel>
-                  <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
-                    {data.problem}
-                  </p>
-                </div>
-              )}
-              
-              {data.problem && data.goal && (
-                <div className="flex md:flex-col items-center justify-center bg-zinc-50/50 dark:bg-zinc-900/20 px-4 py-2 border-y md:border-y-0 md:border-x border-(--color-border)">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-(--color-bg) border border-(--color-border) shadow-sm">
-                    <ArrowRight className="hidden md:block h-4 w-4 text-zinc-400" />
-                    <ArrowDown className="block md:hidden h-4 w-4 text-zinc-400" />
-                  </div>
-                </div>
-              )}
-              
-              {data.goal && (
-                <div className="flex-1 p-6 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-transparent">
-                  <SectionLabel>Target Outcome</SectionLabel>
-                  <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
-                    {data.goal}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {data.stack.length > 0 && (
-            <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
-              <SectionLabel>Technology Blueprint</SectionLabel>
-              <div className="space-y-4">
-                {sortedGroups.map((role) => {
-                  const items = stackGroups[role];
-                  const rc = getRoleColor(role);
-                  return (
-                    <div key={role} className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`h-1.5 w-1.5 rounded-full ${rc.dot}`} />
-                        <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">{role}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {items.map((s, i) => (
-                          <span
-                            key={i}
-                            className={`rounded-lg px-2.5 py-1 text-xs font-medium ${rc.bg} ${rc.text}`}
-                          >
-                            {s.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {data.stack_reason && (
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 italic leading-relaxed pt-2 border-t border-(--color-border)">
-                  {data.stack_reason}
+        {/* Section 1: Problem ➔ Goal Flow Panel (Standalone Area) */}
+        {(data.problem || data.goal) && (
+          <div className="flex flex-col md:flex-row items-stretch rounded-2xl border border-(--color-border) bg-(--color-surface) overflow-hidden transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm">
+            {data.problem && (
+              <div className="flex-1 p-6 bg-gradient-to-br from-red-500/[0.03] via-transparent to-transparent">
+                <SectionLabel>Problem Space</SectionLabel>
+                <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
+                  {data.problem}
                 </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Row 2: Architecture Diagram (Full Width - Spans all 3 columns) */}
-        {data.architecture_diagram_code && (
-          <div className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
-            <div className="flex items-center justify-between">
-              <SectionLabel>System Architecture</SectionLabel>
-              <CopyButton text={data.architecture_diagram_code} label="Mermaid Code" />
-            </div>
-            <div className="rounded-xl bg-zinc-50/50 dark:bg-zinc-900/30 border border-zinc-100 dark:border-zinc-900/40 p-4">
-              <MermaidDiagram code={data.architecture_diagram_code} />
-            </div>
-          </div>
-        )}
-
-        {/* Row 3: Core Metrics (Horizontal 3-column row) */}
-        {data.results && (
-          <div className="grid gap-4 sm:grid-cols-3">
-            {(["performance", "scale", "utility"] as const).map((key) => {
-              const metric = data.results[key];
-              if (!metric?.text) return null;
-              const Icon = getIcon(metric.icon);
-              return (
-                <div key={key} className="flex items-start gap-4 rounded-2xl border border-(--color-border) bg-(--color-surface) p-5 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/30">
-                    <Icon className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <SectionLabel>{key}</SectionLabel>
-                    <p className="text-sm text-(--color-text) font-normal leading-relaxed">{metric.text}</p>
-                  </div>
+              </div>
+            )}
+            
+            {data.problem && data.goal && (
+              <div className="flex md:flex-col items-center justify-center bg-zinc-50/50 dark:bg-zinc-900/20 px-4 py-2 border-y md:border-y-0 md:border-x border-(--color-border)">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-(--color-bg) border border-(--color-border) shadow-sm">
+                  <ArrowRight className="hidden md:block h-4 w-4 text-zinc-400" />
+                  <ArrowDown className="block md:hidden h-4 w-4 text-zinc-400" />
                 </div>
-              );
-            })}
+              </div>
+            )}
+            
+            {data.goal && (
+              <div className="flex-1 p-6 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-transparent">
+                <SectionLabel>Target Outcome</SectionLabel>
+                <p className="mt-3 text-sm text-(--color-text-secondary) font-normal leading-relaxed">
+                  {data.goal}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Row 4: Key Features (Horizontal 3-column row) */}
-        {data.key_features.length > 0 && (
+        {/* Section 2: Key Features Row (Displays directly BEFORE architecture diagram) */}
+        {data.key_features && data.key_features.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-3">
             {data.key_features.map((f, i) => {
               const Icon = getIcon(f.icon);
@@ -358,28 +312,85 @@ export function DefaultLayout({ data }: Props) {
             })}
           </div>
         )}
-      </div>
 
-      {/* Links & Repository References */}
-      {data.links.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 pt-2">
-          {data.links.map((link, i) => {
-            const Icon = getIcon(link.icon);
-            return (
-              <a
-                key={i}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 transition-all hover:border-zinc-400 dark:hover:border-zinc-700 hover:text-(--color-accent) hover:shadow-sm"
-              >
-                <Icon className="h-4 w-4" />
-                {link.label}
-              </a>
-            );
-          })}
+        {/* Section 3: Architecture Diagram (2/3 width) and Tech Stack (1/3 width) beside each other */}
+        <div className="grid gap-4 md:grid-cols-3">
+          
+          {/* System Architecture Diagram Card (Spans 2 columns on desktop) */}
+          {data.architecture_diagram_code && (
+            <div className="md:col-span-2 rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm">
+              <div className="flex items-center justify-between">
+                <SectionLabel>System Architecture</SectionLabel>
+                <CopyButton text={data.architecture_diagram_code} label="Mermaid Code" />
+              </div>
+              <div className="rounded-xl bg-zinc-50/50 dark:bg-zinc-900/30 border border-zinc-100 dark:border-zinc-900/40 p-4">
+                <MermaidDiagram code={data.architecture_diagram_code} />
+              </div>
+            </div>
+          )}
+
+          {/* Tech Stack Card (Spans 1 column on desktop) */}
+          {data.tech_stack && data.tech_stack.length > 0 && (
+            <div className="md:col-span-1 rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm flex flex-col justify-between">
+              <div className="space-y-4">
+                <SectionLabel>Technology Blueprint</SectionLabel>
+                <div className="space-y-4">
+                  {sortedGroups.map((role) => {
+                    const items = stackGroups[role];
+                    const rc = getRoleColor(role);
+                    return (
+                      <div key={role} className="space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`h-1.5 w-1.5 rounded-full ${rc.dot}`} />
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">{role}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {items.map((s, i) => (
+                            <span
+                              key={i}
+                              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${rc.bg} ${rc.text}`}
+                            >
+                              {s.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {data.stack_reason && (
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 italic leading-relaxed pt-2 border-t border-(--color-border)">
+                  {data.stack_reason}
+                </p>
+              )}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Section 4: Performance Metrics (Maintained last at the very bottom as a 3-column row) */}
+        {data.results && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {(["performance", "scale", "utility"] as const).map((key) => {
+              const metric = data.results[key];
+              if (!metric?.text) return null;
+              const Icon = getIcon(metric.icon);
+              return (
+                <div key={key} className="flex items-start gap-4 rounded-2xl border border-(--color-border) bg-(--color-surface) p-5 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/30">
+                    <Icon className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <SectionLabel>{key}</SectionLabel>
+                    <p className="text-sm text-(--color-text) font-normal leading-relaxed">{metric.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

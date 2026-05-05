@@ -31,15 +31,15 @@ export interface GitloreOutput {
   title: string;
   one_liner: string;
   contributions: string;
+  links: LinkItem[];
+  gallery: string[];
   problem: string;
   goal: string;
-  results: Results;
-  stack: StackItem[];
-  stack_reason: string;
-  architecture_diagram_code: string;
-  gallery: string[];
-  links: LinkItem[];
   key_features: Feature[];
+  architecture_diagram_code: string;
+  tech_stack: StackItem[];
+  stack_reason: string;
+  results: Results;
 }
 
 export interface ProgressEvent {
