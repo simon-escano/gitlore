@@ -54,6 +54,7 @@ export interface GenerateRequest {
   contributions: string;
   context?: string;
   gallery?: string[];
+  links?: Array<{ label: string; url: string }>;
 }
 
 export type QueueItemStatus = "pending" | "processing" | "done" | "error";

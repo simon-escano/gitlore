@@ -19,6 +19,7 @@ export interface InferenceContext extends RepoContext {
   contributions: string;
   context?: string;
   gallery: string[];
+  links?: Array<{ label: string; url: string }>;
 }
 
 export interface GitHubTreeResponse {

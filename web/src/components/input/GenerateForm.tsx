@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Send, Plus, Github } from "lucide-react";
+import { Send, Plus, Github, Trash2 } from "lucide-react";
 import type { GenerateRequest } from "../../types/gitlore";
 
 interface Props {
@@ -13,14 +13,34 @@ export function GenerateForm({ onSubmit, onAddToQueue, disabled }: Props) {
   const [title, setTitle] = useState("");
   const [contributions, setContributions] = useState("");
   const [context, setContext] = useState("");
+  const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
 
-  const isValid = url.includes("github.com/") && title.trim() && contributions.trim();
+  const isValid =
+    url.includes("github.com/") &&
+    title.trim() &&
+    contributions.trim() &&
+    links.every((l) => l.label.trim() && l.url.trim().startsWith("http"));
+
+  const handleAddLink = () => {
+    setLinks((prev) => [...prev, { label: "", url: "" }]);
+  };
+
+  const handleRemoveLink = (index: number) => {
+    setLinks((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleLinkChange = (index: number, field: "label" | "url", value: string) => {
+    setLinks((prev) =>
+      prev.map((link, i) => (i === index ? { ...link, [field]: value } : link))
+    );
+  };
 
   const buildRequest = (): GenerateRequest => ({
     url: url.trim(),
     title: title.trim(),
     contributions: contributions.trim(),
     context: context.trim() || undefined,
+    links: links.map((l) => ({ label: l.label.trim(), url: l.url.trim() })),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -98,6 +118,53 @@ export function GenerateForm({ onSubmit, onAddToQueue, disabled }: Props) {
           rows={2}
           className={`${inputClass} resize-none`}
         />
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="block text-xs font-medium uppercase tracking-wider text-(--color-text-muted)">
+            Custom Links <span className="normal-case tracking-normal">(optional)</span>
+          </label>
+          <button
+            type="button"
+            onClick={handleAddLink}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-(--color-accent) hover:text-(--color-accent-hover) transition-colors"
+          >
+            <Plus className="h-3 w-3" />
+            Add Link
+          </button>
+        </div>
+
+        {links.length > 0 && (
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {links.map((link, idx) => (
+              <div key={idx} className="flex gap-2 items-center animate-fade-in">
+                <input
+                  type="text"
+                  placeholder="e.g. Live Demo"
+                  value={link.label}
+                  onChange={(e) => handleLinkChange(idx, "label", e.target.value)}
+                  className={`${inputClass} flex-1`}
+                />
+                <input
+                  type="url"
+                  placeholder="https://example.com"
+                  value={link.url}
+                  onChange={(e) => handleLinkChange(idx, "url", e.target.value)}
+                  className={`${inputClass} flex-[2]`}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveLink(idx)}
+                  className="p-2.5 text-(--color-text-muted) hover:text-(--color-error) rounded-xl hover:bg-(--color-bg-secondary) transition-colors shrink-0"
+                  title="Remove link"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2.5 pt-1">

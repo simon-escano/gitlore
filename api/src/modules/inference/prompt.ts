@@ -59,11 +59,23 @@ RULES (CRITICAL):
 export function buildUserPrompt(context: InferenceContext): string {
   const fileTreeSample = context.fileTree.slice(0, 30).join("\\n");
 
-  return `## Target Output Identity
+  let identitySection = `## Target Output Identity
 Title: ${context.title}
 My Contributions: ${context.contributions}
-Repository URL: https://github.com/${context.owner}/${context.repo}
-Additional Context: ${context.context ?? "None provided"}
+Repository URL: https://github.com/${context.owner}/${context.repo}`;
+
+  if (context.links && context.links.length > 0) {
+    const linksList = context.links.map((l) => `- ${l.label}: ${l.url}`).join("\n");
+    identitySection += `\nAdditional Custom Links:\n${linksList}`;
+  }
+
+  if (context.context) {
+    identitySection += `\nAdditional Context: ${context.context}`;
+  } else {
+    identitySection += `\nAdditional Context: None provided`;
+  }
+
+  return `${identitySection}
 
 ## Repository: ${context.owner}/${context.repo}
 ## Description: ${context.description ?? "No description provided"}

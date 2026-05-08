@@ -28,7 +28,7 @@ async function runPipeline(
     );
   }
 
-  const { url, title, contributions, context, gallery } = parsed.data;
+  const { url, title, contributions, context, gallery, links } = parsed.data;
 
   const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!match) {
@@ -45,7 +45,7 @@ async function runPipeline(
   onProgress({ phase: "ingestion", message: `Starting ingestion for ${owner}/${repo}` });
   const repoContext = await ingestRepository(owner, repo, config, onProgress);
 
-  const inferenceContext = { ...repoContext, title, contributions, context, gallery };
+  const inferenceContext = { ...repoContext, title, contributions, context, gallery, links };
 
   // Step 2: Inference
   onProgress({ phase: "inference", message: "Sending to Cerebras Cloud..." });
@@ -60,6 +60,24 @@ async function runPipeline(
   onProgress({ phase: "validation", message: "Schema + Mermaid validation passed" });
 
   validation.data.gallery = gallery;
+
+  // Merge custom user-supplied links into output links
+  if (links && links.length > 0) {
+    const existingUrls = new Set(validation.data.links.map((l) => l.url.toLowerCase().trim()));
+    const mergedLinks = [...validation.data.links];
+    for (const link of links) {
+      const trimmedUrl = link.url.trim();
+      if (!existingUrls.has(trimmedUrl.toLowerCase())) {
+        const isGithub = trimmedUrl.includes("github.com");
+        mergedLinks.push({
+          icon: isGithub ? "github" : "link",
+          label: link.label.trim(),
+          url: trimmedUrl,
+        });
+      }
+    }
+    validation.data.links = mergedLinks;
+  }
 
   const totalElapsed = ((Date.now() - requestStart) / 1000).toFixed(1);
   console.log(`✅ Generated in ${totalElapsed}s`);
