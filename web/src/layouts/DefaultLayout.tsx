@@ -265,16 +265,13 @@ export function DefaultLayout({ data, onChange }: Props) {
     setScale(1);
   };
 
-  // Group tech_stack by role
-  const stackGroups = (data.tech_stack || []).reduce<Record<string, typeof data.tech_stack>>((acc, item) => {
-    const role = item.role || "Supporting";
-    if (!acc[role]) acc[role] = [];
-    acc[role].push(item);
-    return acc;
-  }, {});
+  const techStack = data.tech_stack || { Primary: [], Supporting: [], Infrastructure: [] };
+  const hasTechStack =
+    (techStack.Primary?.length ?? 0) > 0 ||
+    (techStack.Supporting?.length ?? 0) > 0 ||
+    (techStack.Infrastructure?.length ?? 0) > 0;
 
-  const roleOrder = ["Primary", "Supporting", "Infrastructure"];
-  const sortedGroups = roleOrder.filter((r) => stackGroups[r]);
+  const roleOrder = ["Primary", "Supporting", "Infrastructure"] as const;
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -495,13 +492,15 @@ export function DefaultLayout({ data, onChange }: Props) {
           </div>
 
           {/* Tech Stack Card (Spans 1 column on desktop) */}
-          {data.tech_stack && data.tech_stack.length > 0 && (
+          {/* Tech Stack Card (Spans 1 column on desktop) */}
+          {hasTechStack && (
             <div className="md:col-span-1 rounded-2xl border border-(--color-border) bg-(--color-surface) p-6 space-y-4 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-800 shadow-sm flex flex-col justify-between">
               <div className="space-y-4">
                 <SectionLabel>Technology Blueprint</SectionLabel>
                 <div className="space-y-4">
-                  {sortedGroups.map((role) => {
-                    const items = stackGroups[role];
+                  {roleOrder.map((role) => {
+                    const items = techStack[role] || [];
+                    if (items.length === 0) return null;
                     const rc = getRoleColor(role);
                     return (
                       <div key={role} className="space-y-2">

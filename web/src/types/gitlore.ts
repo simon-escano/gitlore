@@ -2,7 +2,12 @@
 
 export interface StackItem {
   name: string;
-  role: string;
+}
+
+export interface TechStack {
+  Primary: StackItem[];
+  Supporting: StackItem[];
+  Infrastructure: StackItem[];
 }
 
 export interface ResultMetric {
@@ -37,7 +42,7 @@ export interface GitloreOutput {
   gallery: string[];
   key_features: Feature[];
   architecture_diagram_code: string;
-  tech_stack: StackItem[];
+  tech_stack: TechStack;
   stack_reason: string;
   results: Results;
 }

@@ -1,12 +1,10 @@
 import { z } from "zod";
 
 const StackItemSchema = z.preprocess((val) => {
-  if (val && typeof val === "object" && "name" in val) return val;
-  if (typeof val === "string") return { name: val, role: "Supporting" };
+  if (typeof val === "string") return { name: val };
   return val;
 }, z.object({
   name: z.string(),
-  role: z.string().default("Supporting"),
 }));
 
 const ResultsSchema = z.object({
@@ -42,7 +40,11 @@ export const GitloreOutputSchema = z.object({
   gallery: z.array(z.string()).default([]),
   key_features: z.array(FeatureSchema).default([]),
   architecture_diagram_code: z.string().default(""),
-  tech_stack: z.array(StackItemSchema).default([]),
+  tech_stack: z.object({
+    Primary: z.array(StackItemSchema).default([]),
+    Supporting: z.array(StackItemSchema).default([]),
+    Infrastructure: z.array(StackItemSchema).default([]),
+  }).default({ Primary: [], Supporting: [], Infrastructure: [] }),
   stack_reason: z.string().default(""),
   results: ResultsSchema.optional().default({
     performance: { icon: "zap", text: "" },

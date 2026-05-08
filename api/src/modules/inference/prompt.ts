@@ -17,9 +17,11 @@ const TS_INTERFACE = `interface Portfolio {
     { icon: string; text: string }
   ]; // MUST generate exactly 3 features
   architecture_diagram_code: string; // A valid Mermaid.js graph TD diagram
-  tech_stack: [
-    { name: string; role: "Primary" | "Supporting" | "Infrastructure" }
-  ]; // MUST generate between 1 and 6 items MAX. Only include the most critical technologies.
+  tech_stack: {
+    Primary: { name: string }[];
+    Supporting: { name: string }[];
+    Infrastructure: { name: string }[];
+  }; // Group the most critical technologies by their role. Limit the total number of items across all groups to 8 MAX.
   stack_reason: string; // Explain why this stack was chosen in 1-2 sentences
   results: {
     performance: { icon: "zap"; text: string }; // e.g., "Reduced cold start..."
@@ -46,7 +48,7 @@ CRITICAL STRUCTURAL RULES (COMPLIANCE MANDATORY):
 
 RULES (CRITICAL):
 1. THINK FIRST: You MUST write a brief, highly concise architectural planning and system analysis under 150 words total in the \`_thinking\` field FIRST. Keep this planning phase very short to preserve token space.
-2. STACK LIMIT: You MUST limit the \`tech_stack\` array to a maximum of 6 items. Select only the most important technologies.
+2. STACK LIMIT: You MUST limit the total number of items across all \`tech_stack\` groups to a maximum of 8 items. Select only the most important technologies.
 3. CONTRIBUTIONS: The user provides raw notes about what they did. You MUST synthesize these into polished, professional role titles in the \`contributions\` field. For example, if they write "made the database, helped with frontend, fixed bugs", you output "Database Architect, Frontend Developer, QA Engineer". Be concise and professional.
 4. PROBLEM STATEMENT: The \`problem\` field MUST describe a real-world, user-facing pain-point or deep technical constraint that the codebase is designed to tackle. NEVER use marketing slogans or simply write a positive description of what the project does. For example, instead of writing "Building a database caching query module", write "Slow database query response times during high-traffic shopping events cause customers to abandon their carts."
 5. ROLE-BASED ARCHITECTURE: The \`architecture_diagram_code\` MUST focus primarily on the components where the user made contributions (based on their contributions and context). Focus on the structures they managed (e.g., Database schema, Frontend flow, API integration).
