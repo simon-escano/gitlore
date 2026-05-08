@@ -64,6 +64,72 @@ gitlore/
 
 ---
 
+## 📋 Input & Output Schemas
+
+Gitlore utilizes strict, type-safe API contracts validated on Cloudflare's Edge using **Zod**.
+
+### 📥 Request Input Contract
+POST requests sent to `/api/generate` or `/api/generate/stream` accept the following payload:
+
+```json
+{
+  "url": "https://github.com/owner/repo",                      // Required: GitHub repository HTTP URL
+  "title": "My Project Title",                                 // Required: Catchy, readable title for the workspace
+  "contributions": "Designed database schema, built API",      // Required: Raw text detailing your active contributions
+  "context": "Optional extra system guidance or constraints",  // Optional: Extra guidelines for LLM steering
+  "links": [                                                   // Optional: Custom links displayed alongside the title
+    { "label": "Live Demo", "url": "https://demo.example.com" }
+  ],
+  "gallery": []                                                // Optional: Custom screenshot or mockup URLs
+}
+```
+
+### 📤 Response Output Contract (`GitloreOutput`)
+The API processes source code and returns a validated JSON structure mapping to this schema:
+
+```json
+{
+  "_thinking": "Concise architectural system planning and analysis under 150 words.",
+  "title": "Refined Professional Title",
+  "one_liner": "A single sentence summary encapsulating the system's main value.",
+  "contributions": "Polished comma-separated titles representing your core contributions.",
+  "links": [
+    { "icon": "github", "label": "GitHub", "url": "https://github.com/owner/repo" }
+  ],
+  "problem": "Operational pain-point or high-impact technical constraint solved by the project.",
+  "goal": "The target engineering or product outcome.",
+  "gallery": [],
+  "key_features": [
+    { "icon": "zap", "text": "Core feature description 1" },
+    { "icon": "layers", "text": "Core feature description 2" },
+    { "icon": "shield", "text": "Core feature description 3" }
+  ],
+  "architecture_diagram_code": "graph TD\n  A[\"Node A\"] --> B[\"Node B\"]", // Mermaid.js graph TD diagram
+  "tech_stack": {
+    "Primary": [
+      { "name": "React" },
+      { "name": "TypeScript" }
+    ],
+    "Supporting": [
+      { "name": "Zod" },
+      { "name": "TailwindCSS" }
+    ],
+    "Infrastructure": [
+      { "name": "Cloudflare Workers" },
+      { "name": "Cerebras Cloud" }
+    ]
+  },
+  "stack_reason": "Architectural explanation explaining why this stack was selected.",
+  "results": {
+    "performance": { "icon": "zap", "text": "Performance acceleration achievements" },
+    "scale": { "icon": "layers", "text": "Resource utilization & structural scalability gains" },
+    "utility": { "icon": "shield", "text": "Reliability, safety, or workflow enhancement advantages" }
+  }
+}
+```
+
+---
+
 ## 📦 Setup
 
 ### Prerequisites
