@@ -6,6 +6,79 @@ import { Errors } from "../../lib/errors";
 import type { InferenceContext } from "../ingestion/types";
 import type { GitloreOutput } from "../../schemas/response";
 
+/**
+ * Safely escape any invalid raw control characters (like newlines, carriage returns, or tabs)
+ * that occur inside JSON string values, preventing JSON.parse syntax errors.
+ */
+function escapeControlCharactersInStrings(json: string): string {
+  let result = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < json.length; i++) {
+    const char = json[i];
+
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      result += char;
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+
+    if (inString) {
+      if (char === "\n") {
+        result += "\\n";
+      } else if (char === "\r") {
+        result += "\\r";
+      } else if (char === "\t") {
+        result += "\\t";
+      } else {
+        result += char;
+      }
+    } else {
+      result += char;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Clean up AI output before parsing JSON. Strips markdown fences,
+ * single-line comments, and multi-line comments.
+ */
+function cleanJsonString(raw: string): string {
+  let cleaned = raw.trim();
+
+  // 1. Remove markdown code fences if present
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```[a-zA-Z]*\s*/, "").replace(/\s*```$/, "");
+  }
+  cleaned = cleaned.trim();
+
+  // 2. Remove single-line comments // that are not part of URLs
+  cleaned = cleaned.replace(/(?<!http:|https:)\/\/.*$/gm, "");
+
+  // 3. Remove multi-line comments /* ... */
+  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  // 4. Safely escape invalid control characters inside JSON strings
+  cleaned = escapeControlCharactersInStrings(cleaned);
+
+  return cleaned.trim();
+}
+
 export async function analyzeWithCerebras(
   context: InferenceContext,
   config: AppConfig,
@@ -67,13 +140,14 @@ export async function analyzeWithCerebras(
 
     buffer += decoder.decode(value, { stream: true });
 
-    const lines = buffer.split("\n\n");
+    const lines = buffer.split("\n");
     buffer = lines.pop() ?? "";
 
     for (const line of lines) {
-      if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.startsWith("data: ") || trimmed === "data: [DONE]") continue;
 
-      const jsonStr = line.slice(6);
+      const jsonStr = trimmed.slice(6).trim();
       try {
         const chunk = JSON.parse(jsonStr);
         const content = chunk.choices?.[0]?.delta?.content;
@@ -103,6 +177,21 @@ export async function analyzeWithCerebras(
     }
   }
 
+  // Process any remaining content left in the buffer at stream end
+  if (buffer.length > 0) {
+    const trimmed = buffer.trim();
+    if (trimmed && trimmed.startsWith("data: ") && trimmed !== "data: [DONE]") {
+      const jsonStr = trimmed.slice(6).trim();
+      try {
+        const chunk = JSON.parse(jsonStr);
+        const content = chunk.choices?.[0]?.delta?.content;
+        if (content) {
+          fullContent += content;
+        }
+      } catch {}
+    }
+  }
+
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   onProgress({
     phase: "inference",
@@ -110,11 +199,16 @@ export async function analyzeWithCerebras(
     detail: `${fullContent.length.toLocaleString()} chars total`,
   });
 
+  const cleanedContent = cleanJsonString(fullContent);
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fullContent);
-  } catch {
-    throw Errors.inferenceFailure("Cerebras returned invalid JSON: " + fullContent.slice(0, 200));
+    parsed = JSON.parse(cleanedContent);
+  } catch (err: any) {
+    console.error("[Cerebras JSON Parse Error]", err);
+    throw Errors.inferenceFailure(
+      `Cerebras returned invalid JSON: ${err.message}. Raw output snippet (first 2000 chars):\n${cleanedContent.slice(0, 2000)}`
+    );
   }
 
   onProgress({ phase: "inference", message: "JSON parsed successfully" });

@@ -8,7 +8,7 @@ const TS_INTERFACE = `interface Portfolio {
   links: [
     { icon: "github"; label: string; url: string }
   ]; // MUST include at least one link
-  problem: string; // The actual core user pain-point, challenge, or operational friction that this repository exists to solve (e.g. "Slow database query response times during high-traffic shopping events cause customers to abandon their carts" rather than simply "Optimizes postgres database speed"). Make it sound like a real, relatable human pain-point or high-impact technical constraint.
+  problem: string; // The core real-world pain point or deep technical challenge that this specific repository exists to solve. NEVER copy any examples verbatim. Make it sound like a real, relatable human pain point or technical bottleneck specific to this project's actual domain. Do NOT write e-commerce database speed problems unless this is actually an e-commerce database project.
   goal: string; // The goal of the project
   gallery: string[]; // List of mock gallery screenshots or visual nodes, keep empty default [] if none.
   key_features: [
@@ -24,9 +24,9 @@ const TS_INTERFACE = `interface Portfolio {
   }; // Group the most critical technologies by their role. Limit the total number of items across all groups to 8 MAX.
   stack_reason: string; // Explain why this stack was chosen in 1-2 sentences
   results: {
-    performance: { icon: "zap"; text: string }; // e.g., "Reduced cold start..."
-    scale: { icon: "layers"; text: string };
-    utility: { icon: "shield"; text: string };
+    performance: { icon: "zap"; text: string }; // High-impact architectural or performance benefit. Focus on qualitative technical strengths (e.g., "Optimizes request routing latency using Cloudflare's global edge network") instead of inventing fake statistics or percentages unless explicitly documented in the repo context.
+    scale: { icon: "layers"; text: string }; // High-impact scale or resource efficiency benefit (e.g., "Maintains sub-second processing and zero server overhead using stateless microservices"). DO NOT invent fake numbers.
+    utility: { icon: "shield"; text: string }; // Core architectural utility, security, or safety benefit (e.g., "Guarantees data correctness and API type-safety by enforcing runtime Zod schema boundaries").
   };
 }`;
 
@@ -50,10 +50,13 @@ RULES (CRITICAL):
 1. THINK FIRST: You MUST write a brief, highly concise architectural planning and system analysis under 150 words total in the \`_thinking\` field FIRST. Keep this planning phase very short to preserve token space.
 2. STACK LIMIT: You MUST limit the total number of items across all \`tech_stack\` groups to a maximum of 8 items. Select only the most important technologies.
 3. CONTRIBUTIONS: The user provides raw notes about what they did. You MUST synthesize these into polished, professional role titles in the \`contributions\` field. For example, if they write "made the database, helped with frontend, fixed bugs", you output "Database Architect, Frontend Developer, QA Engineer". Be concise and professional.
-4. PROBLEM STATEMENT: The \`problem\` field MUST describe a real-world, user-facing pain-point or deep technical constraint that the codebase is designed to tackle. NEVER use marketing slogans or simply write a positive description of what the project does. For example, instead of writing "Building a database caching query module", write "Slow database query response times during high-traffic shopping events cause customers to abandon their carts."
+4. PROBLEM STATEMENT: The \`problem\` field MUST describe a real-world, user-facing pain-point, operational friction, or deep technical constraint that the codebase is designed to tackle. NEVER use marketing slogans or simply write a positive description of what the project does. DO NOT copy examples verbatim. Instead, analyze the actual repository domain and write a specific, unique problem.
+   - For example, if the project is a developer/portfolio tool: "Developers struggle to manually transform their repositories into polished, high-impact technical portfolios, making it hard to showcase their contributions to recruiters."
+   - For a real-time system: "High-frequency state updates overwhelm standard REST API endpoints, causing lag and synchronization issues in collaborative environments."
+   You must formulate a problem statement tailored to the actual purpose and domain of the repository being analyzed.
 5. ROLE-BASED ARCHITECTURE: The \`architecture_diagram_code\` MUST focus primarily on the components where the user made contributions (based on their contributions and context). Focus on the structures they managed (e.g., Database schema, Frontend flow, API integration).
 6. DYNAMIC DIAGRAM: \`architecture_diagram_code\` MUST be a dynamic, non-linear Mermaid.js graph TD diagram. Use branching and parallel paths (e.g., A --> B and A --> C) to show how data flows between different systems. LIMIT the diagram to 10 nodes MAX. CRITICAL SYNTAX RULES: Use simple alphanumeric node IDs (A, B, C) and attach labels with square brackets like A["My Label"]. ALWAYS quote labels containing special characters with double quotes inside square brackets. NEVER use bare parentheses in labels. NEVER use spaces in node IDs.
-7. NO HALLUCINATION: If specific quantitative data is NOT present, describe qualitative architectural benefits instead. Do NOT invent fake numbers.
+7. NO HALLUCINATION: Do NOT invent fake numbers, statistics, percentages, or performance benchmarks (e.g., "Reduced response times by 40%" or "Handles 10,000+ requests"). If specific quantitative data is NOT present in the codebase or README, describe qualitative architectural benefits instead (e.g., "Enforces predictable state management", "Eliminates server-side cold starts").
 8. NO PLACEHOLDERS: Use the exact Repository URL provided.
 9. Write as if presenting to a hiring manager at a top-tier tech company.`;
 }
