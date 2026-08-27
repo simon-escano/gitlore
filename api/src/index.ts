@@ -17,7 +17,7 @@ app.use("/*", cors({
 
 // Health check / info endpoint
 app.get("/", (c) => {
-  const model = c.env.CEREBRAS_MODEL ?? "llama3.1-8b";
+  const model = c.env.CEREBRAS_MODEL ?? "gpt-oss-120b";
   return c.json({
     name: "gitlore",
     version: "1.0.0",

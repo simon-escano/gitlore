@@ -30,7 +30,7 @@ export function getConfig(env: Bindings): AppConfig {
   return Object.freeze({
     cerebras: {
       apiKey: env.CEREBRAS_API_KEY,
-      model: env.CEREBRAS_MODEL ?? "llama3.1-8b",
+      model: env.CEREBRAS_MODEL ?? "gpt-oss-120b",
       chatEndpoint: "https://api.cerebras.ai/v1/chat/completions",
     },
     github: {

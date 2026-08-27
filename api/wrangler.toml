@@ -7,5 +7,5 @@ compatibility_flags = ["nodejs_compat"]
 enabled = true
 
 [vars]
-CEREBRAS_MODEL = "llama3.1-8b"
+CEREBRAS_MODEL = "gpt-oss-120b"
 MAX_CONTEXT_CHARS = "12000"
