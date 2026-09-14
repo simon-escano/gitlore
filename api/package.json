@@ -2,7 +2,7 @@
   "name": "api",
   "version": "1.0.0",
   "type": "module",
-  "description": "Portfolio intelligence API — Cloudflare Workers + Cerebras Cloud",
+  "description": "Portfolio intelligence API — Cloudflare Workers + Google Gemini",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",

@@ -17,13 +17,13 @@ app.use("/*", cors({
 
 // Health check / info endpoint
 app.get("/", (c) => {
-  const model = c.env.CEREBRAS_MODEL ?? "gpt-oss-120b";
+  const model = c.env.GEMINI_MODEL ?? c.env.CEREBRAS_MODEL ?? "gemini-3.6-flash";
   return c.json({
     name: "gitlore",
     version: "1.0.0",
     status: "running",
     model,
-    provider: "cerebras",
+    provider: "gemini",
     runtime: "cloudflare-workers",
   });
 });

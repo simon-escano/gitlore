@@ -1,7 +1,7 @@
 # ARCHITECTURE_MANIFEST.md — Gitlore
 
 > **Runtime:** Cloudflare Workers (Free Tier)
-> **Inference:** Cerebras Cloud (Free Tier)
+> **Inference:** Google Gemini API (Free Tier)
 > **Cost:** $0.00/month
 
 ---
@@ -21,7 +21,7 @@ graph LR
 | Module | Responsibility | I/O |
 |--------|---------------|-----|
 | **Ingestion** | Fetch repo metadata + pack source files into a context string | `(owner, repo, config)` → `RepoContext` |
-| **Inference** | Send context to Cerebras Cloud, receive structured JSON via SSE | `(RepoContext, config)` → `RawLLMOutput` |
+| **Inference** | Send context to Google Gemini API, receive structured JSON via SSE | `(RepoContext, config)` → `RawLLMOutput` |
 | **Validation** | Zod-parse output, validate Mermaid syntax | `RawLLMOutput` → `GitloreOutput` |
 
 ### Data Flow Types
@@ -29,7 +29,7 @@ graph LR
 ```
 Request → { owner: string, repo: string, context?: string }
 RepoContext → { readme: string, packageInfo: object, fileTree: string[], packedSource: string }
-RawLLMOutput → string (raw JSON from Cerebras, parsed inline)
+RawLLMOutput → string (raw JSON from Gemini, parsed inline)
 GitloreOutput → validated object matching the Solution Data Contract (§3)
 ```
 
@@ -57,7 +57,7 @@ gitlore/
 │   │   │   ├── packer.ts           # Source file packer (priority tiers, token budget)
 │   │   │   └── types.ts            # RepoContext, FileEntry types
 │   │   ├── inference/
-│   │   │   ├── cerebras.ts         # Cerebras Cloud API client (SSE streaming)
+│   │   │   ├── gemini.ts           # Google Gemini API client (SSE streaming)
 │   │   │   └── prompt.ts           # System + user prompt assembly
 │   │   └── validation/
 │   │       ├── schema.ts           # Zod parse + Mermaid syntax check
@@ -92,14 +92,14 @@ See `src/schemas/response.ts` for the exact Zod schema implementation.
 ### Secrets (via `wrangler secret put`)
 | Name | Required | Description |
 |------|----------|-------------|
-| `CEREBRAS_API_KEY` | ✅ | Cerebras Cloud API key (free tier) |
+| `GEMINI_API_KEY` | ✅ | Google Gemini API key (free tier) |
 | `GITHUB_PAT` | Optional | GitHub Personal Access Token (increases rate limit to 5,000/hr) |
 
 ### Environment Variables (in `wrangler.toml`)
 | Name | Default | Description |
 |------|---------|-------------|
-| `CEREBRAS_MODEL` | `llama3.1-8b` | Model to use for inference |
-| `MAX_CONTEXT_CHARS` | `12000` | Max characters of source code to pack |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | Model to use for inference |
+| `MAX_CONTEXT_CHARS` | `16000` | Max characters of source code to pack |
 
 ---
 
@@ -112,7 +112,7 @@ See `src/schemas/response.ts` for the exact Zod schema implementation.
 | Subrequests | 50/request | Safe — typically 5-15 per generate call |
 | Script Size | 1 MB gzipped | Safe — ~25KB source + minimal deps |
 
-> **CPU Time Note:** The Worker spends almost all its time waiting on external API calls (GitHub, Cerebras). These are I/O waits and do NOT count toward the 10ms CPU limit. Only JSON parsing and Zod validation consume CPU, which is negligible.
+> **CPU Time Note:** The Worker spends almost all its time waiting on external API calls (GitHub, Gemini). These are I/O waits and do NOT count toward the 10ms CPU limit. Only JSON parsing and Zod validation consume CPU, which is negligible.
 
 ---
 

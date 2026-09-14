@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { GenerateRequestSchema } from "../schemas/request";
 import { ingestRepository } from "../modules/ingestion/packer";
-import { analyzeWithCerebras } from "../modules/inference/cerebras";
+import { analyzeWithGemini } from "../modules/inference/gemini";
 import { validateOutput } from "../modules/validation/schema";
 import { GitloreError, Errors } from "../lib/errors";
 import { getConfig, type Bindings } from "../lib/config";
@@ -100,8 +100,8 @@ async function runPipeline(
   const inferenceContext = { ...repoContext, title, contributions, context, gallery, links };
 
   // Step 2: Inference
-  onProgress({ phase: "inference", message: "Sending to Cerebras Cloud..." });
-  const output = await analyzeWithCerebras(inferenceContext, config, onProgress);
+  onProgress({ phase: "inference", message: "Sending to Google Gemini..." });
+  const output = await analyzeWithGemini(inferenceContext, config, onProgress);
 
   // Step 3: Validation
   onProgress({ phase: "validation", message: "Running schema validation..." });

@@ -11,7 +11,7 @@ export function Footer() {
         >
           Gitlore
         </a>
-        {" "}— Powered by Cerebras Cloud & Cloudflare Workers
+        {" "}— Powered by Google Gemini & Cloudflare Workers
       </p>
     </footer>
   );

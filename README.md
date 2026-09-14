@@ -9,7 +9,7 @@ Gitlore transforms any GitHub repository into a structured, high-impact technica
 * ⚙️ **REST API Gateway**: [https://api.gitlore.workers.dev](https://api.gitlore.workers.dev)
 
 > [!NOTE]
-> Gitlore is completely free to run. Cloudflare Workers (100K req/day), Cloudflare Pages (unlimited sites), and Cerebras Cloud (free inference) — no credit card required.
+> Gitlore is completely free to run. Cloudflare Workers (100K req/day), Cloudflare Pages (unlimited sites), and Google Gemini API (free tier) — no credit card required.
 
 ---
 
@@ -20,7 +20,7 @@ graph LR
     A["Browser (React SPA)"] --> B["Cloudflare Pages"]
     B --> C["Cloudflare Worker (API)"]
     C --> D["GitHub REST API"]
-    C --> E["Cerebras Cloud"]
+    C --> E["Google Gemini API"]
 ```
 
 This is a **pnpm monorepo** with two packages:
@@ -116,7 +116,7 @@ The API processes source code and returns a validated JSON structure mapping to 
     ],
     "Infrastructure": [
       { "name": "Cloudflare Workers" },
-      { "name": "Cerebras Cloud" }
+      { "name": "Google Gemini" }
     ]
   },
   "stack_reason": "Architectural explanation explaining why this stack was selected.",
@@ -134,7 +134,7 @@ The API processes source code and returns a validated JSON structure mapping to 
 
 ### Prerequisites
 - [Cloudflare account](https://dash.cloudflare.com/sign-up) (free)
-- [Cerebras API key](https://cloud.cerebras.ai) (free)
+- [Google AI Studio Gemini API key](https://aistudio.google.com) (free)
 - [Node.js](https://nodejs.org) ≥ 18
 - [pnpm](https://pnpm.io)
 
@@ -149,7 +149,7 @@ pnpm install
 ```bash
 cd api
 npx wrangler login
-npx wrangler secret put CEREBRAS_API_KEY
+npx wrangler secret put GEMINI_API_KEY
 # Optional: npx wrangler secret put GITHUB_PAT
 ```
 
@@ -163,7 +163,7 @@ pnpm dev:web      # Web only
 
 Create `api/.dev.vars` for local API secrets:
 ```env
-CEREBRAS_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here
 GITHUB_PAT=your_github_pat_here
 ```
 
@@ -225,7 +225,7 @@ Edit `web/src/layouts/DefaultLayout.tsx` — this controls how your bento-grid p
 |---------|------|------|
 | Cloudflare Workers | Free (100K req/day, max 50 subrequests/run) | **$0** |
 | Cloudflare Pages | Free (unlimited sites) | **$0** |
-| Cerebras Cloud | Free (rate-limited, high-speed Llama completions) | **$0** |
+| Google Gemini API | Free (standard tier structured completions) | **$0** |
 | GitHub REST API | Free (5K req/hr with GITHUB_PAT) | **$0** |
 | **Total** | | **$0/month** |
 

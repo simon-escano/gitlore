@@ -2,15 +2,15 @@ import { performance } from "perf_hooks";
 
 async function runStressTest() {
   console.log("========================================");
-  console.log("🚀 GITLORE CEREBRAS STRESS TEST");
+  console.log("🚀 GITLORE GEMINI STRESS TEST");
   console.log("========================================");
   
-  const endpoint = "http://localhost:3000/api/generate";
+  const endpoint = "http://localhost:8787/api/generate";
   const payload = {
     url: "https://github.com/simon-escano/gitlore",
     title: "Gitlore - The Local AI Portfolio Builder",
     role: "Lead Architect",
-    context: "Stress testing Cerebras Llama 3.1 8B pipeline."
+    context: "Stress testing Google Gemini pipeline."
   };
 
   const iterations = 5;
