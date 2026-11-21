@@ -1,6 +1,6 @@
 import type { GenerateRequest, ProgressEvent, GitloreOutput } from "../types/gitlore";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "https://api.gitlore.workers.dev";
+const API_URL = import.meta.env.VITE_API_URL ?? "https://gitlore-api.siteworks.uk";
 
 interface StreamCallbacks {
   onProgress: (event: ProgressEvent) => void;

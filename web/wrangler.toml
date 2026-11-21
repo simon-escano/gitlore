@@ -1,5 +1,9 @@
 name = "web"
 compatibility_date = "2025-04-01"
+# Served only at the custom domain (DNS + certificate are created on deploy); workers.dev and preview URLs are off.
+workers_dev = false
+preview_urls = false
+routes = [{ pattern = "gitlore.siteworks.uk", custom_domain = true }]
 
 [assets]
 directory = "./dist"

@@ -5,8 +5,8 @@
 Gitlore transforms any GitHub repository into a structured, high-impact technical case study. The API runs on **Cloudflare Workers** and the frontend on **Cloudflare Pages** — both on the free tier at zero cost.
 
 ### 🔗 Try It Live
-* 🌐 **React SPA Dashboard**: [https://web.gitlore.workers.dev](https://web.gitlore.workers.dev)
-* ⚙️ **REST API Gateway**: [https://api.gitlore.workers.dev](https://api.gitlore.workers.dev)
+* 🌐 **React SPA Dashboard**: [https://gitlore.siteworks.uk](https://gitlore.siteworks.uk)
+* ⚙️ **REST API Gateway**: [https://gitlore-api.siteworks.uk](https://gitlore-api.siteworks.uk)
 
 > [!NOTE]
 > Gitlore is completely free to run. Cloudflare Workers (100K req/day), Cloudflare Pages (unlimited sites), and Google Gemini API (free tier) — no credit card required.
@@ -187,14 +187,14 @@ The API has two endpoints:
 
 ### Standard (JSON response)
 ```bash
-curl -X POST https://api.gitlore.workers.dev/api/generate \
+curl -X POST https://gitlore-api.siteworks.uk/api/generate \
   -H "Content-Type: application/json" \
   -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "contributions": "Built the API and database layer" }'
 ```
 
 ### Streaming (SSE with progress events)
 ```bash
-curl -N -X POST https://api.gitlore.workers.dev/api/generate/stream \
+curl -N -X POST https://gitlore-api.siteworks.uk/api/generate/stream \
   -H "Content-Type: application/json" \
   -d '{ "url": "https://github.com/owner/repo", "title": "My Project", "contributions": "Built the API and database layer" }'
 ```
